@@ -1,0 +1,537 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Betting Analysis Widget</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        .analytics-widget {
+            border: 2px solid #1E3A8A;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            background-color: #F3F4F6;
+            width: 100%;
+            height: 320px;
+            overflow-y: auto;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            position: relative;
+            display: block;
+            box-sizing: border-box;
+        }
+
+            .analytics-widget h3 {
+                font-size: 14px;
+                margin: 0 0 8px 0;
+                color: #FFFFFF;
+                text-align: center;
+                font-weight: 600;
+                background-color: #1E3A8A;
+                padding: 6px 0;
+                border-radius: 4px;
+            }
+
+            .analytics-widget select {
+                font-size: 12px;
+                padding: 4px;
+                width: 100%;
+                margin-bottom: 8px;
+                box-sizing: border-box;
+                border: 1px solid #D1D5DB;
+                border-radius: 4px;
+            }
+
+            .analytics-widget table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+                margin: 0 0 8px 0;
+                background-color: #FFFFFF;
+            }
+
+            .analytics-widget th, .analytics-widget td {
+                padding: 4px;
+                border: 1px solid #E5E7EB;
+                text-align: left;
+                white-space: nowrap;
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .analytics-widget th {
+                background-color: #3B82F6;
+                color: #FFFFFF;
+                font-weight: 600;
+            }
+
+            .analytics-widget .subheader {
+                font-size: 12px;
+                font-weight: 600;
+                margin: 8px 0 4px 0;
+                color: #1E3A8A;
+                background-color: #EBF4FF;
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+
+            .analytics-widget .error {
+                color: #DC2626;
+                font-size: 12px;
+                background-color: #FEF2F2;
+                padding: 8px;
+                border-radius: 4px;
+                border: 1px solid #FECACA;
+            }
+
+            .analytics-widget .loading {
+                font-size: 12px;
+                color: #6B7280;
+                text-align: center;
+                padding: 20px;
+            }
+
+            .analytics-widget .raw-data {
+                font-size: 10px;
+                color: #374151;
+                white-space: pre-wrap;
+                background-color: #F9FAFB;
+                padding: 4px;
+                border-radius: 4px;
+                margin-top: 8px;
+                max-height: 100px;
+                overflow-y: auto;
+            }
+
+            .analytics-widget .debug-info {
+                font-size: 10px;
+                color: #6B7280;
+                background-color: #F9FAFB;
+                padding: 4px;
+                border-radius: 4px;
+                margin-bottom: 8px;
+            }
+
+            .analytics-widget canvas {
+                max-height: 180px;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+
+            .analytics-widget button {
+                font-size: 12px;
+                padding: 4px 8px;
+                margin-bottom: 8px;
+                background-color: #3B82F6;
+                color: #FFFFFF;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+                .analytics-widget button:hover {
+                    background-color: #1E3A8A;
+                }
+    </style>
+</head>
+<body>
+    <div class="analytics-widget">
+        <h3>Client Custom Widget</h3>
+        <select id="analysis-type" onchange="performAnalysis()">
+            <option value="metrics">Metrics</option>
+            <option value="sport_breakdown">Sport Breakdown</option>
+            <option value="wager_type_breakdown">Wager Type Breakdown</option>
+            <option value="popular_selections">Popular Selections</option>
+            <option value="game_timing">Game Timing</option>
+        </select>
+        <div id="toggle-view" style="display: none;">
+            <button onclick="toggleView()">Show Chart</button>
+        </div>
+        <div id="betting-analysis-result"></div>
+        <div id="debug-info" class="debug-info"></div>
+    </div>
+
+    <script>
+        let records = null;
+        const debugDiv = document.getElementById('debug-info');
+
+        // This listener waits for the parent window to send the JSON data
+        window.addEventListener('message', function(event) {
+            console.log('Message received from:', event.origin, 'Data:', event.data);
+            debugDiv.textContent = `Received from ${event.origin} at ${new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/London'})}`;
+            if (event.data && event.data.type === 'bettingData') {
+                records = event.data.records;
+                debugDiv.textContent += ` | Records: ${records.length}`;
+                console.log('Records processed:', records);
+                performAnalysis();
+            } else {
+                debugDiv.textContent += ' | Invalid or no data';
+            }
+        });
+
+        // Your JavaScript functions here
+        function calculateMetrics(data) {
+            let totalStakes = 0;
+            let totalProfitLoss = 0;
+            let totalBets = data.length;
+            let totalWins = 0;
+            let totalLosses = 0;
+            data.forEach(record => {
+                const wagered = parseFloat(record.FinalAmountWagered) || 0;
+                const won = parseFloat(record.FinalAmountWon) || 0;
+                totalStakes += wagered;
+                const profit = won - wagered;
+                totalProfitLoss += profit;
+                if (profit > 0) totalWins++;
+                if (profit < 0) totalLosses++;
+            });
+            return {
+                'Total Bets': totalBets,
+                'Total Stakes': totalStakes.toFixed(2),
+                'Total Profit/Loss': totalProfitLoss.toFixed(2),
+                'Win Rate': ((totalWins / totalBets) * 100).toFixed(2) + '%',
+                'Total Wins': totalWins,
+                'Total Losses': totalLosses
+            };
+        }
+
+        function calculateSportBreakdown(data) {
+            const breakdown = {};
+            data.forEach(record => {
+                const sport = record.SportType || 'Unknown';
+                if (!breakdown[sport]) {
+                    breakdown[sport] = { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 };
+                }
+                breakdown[sport]['Bet Count'] += 1;
+                const wagered = parseFloat(record.FinalAmountWagered) || 0;
+                const won = parseFloat(record.FinalAmountWon) || 0;
+                breakdown[sport]['Total Stakes'] += wagered;
+                breakdown[sport]['Profit/Loss'] += (won - wagered);
+            });
+            return Object.entries(breakdown).map(([sport, info]) => ({
+                Sport: sport,
+                'Bet Count': info['Bet Count'],
+                'Total Stakes': info['Total Stakes'].toFixed(2),
+                'Profit/Loss': info['Profit/Loss'].toFixed(2)
+            }));
+        }
+
+        function calculateWagerTypeBreakdown(data) {
+            const breakdown = {};
+            data.forEach(record => {
+                const wagerType = record.WagerType || 'Unknown';
+                if (!breakdown[wagerType]) {
+                    breakdown[wagerType] = { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 };
+                }
+                breakdown[wagerType]['Bet Count'] += 1;
+                const wagered = parseFloat(record.FinalAmountWagered) || 0;
+                const won = parseFloat(record.FinalAmountWon) || 0;
+                breakdown[wagerType]['Total Stakes'] += wagered;
+                breakdown[wagerType]['Profit/Loss'] += (won - wagered);
+            });
+            return Object.entries(breakdown).map(([wagerType, info]) => ({
+                'Wager Type': wagerType,
+                'Bet Count': info['Bet Count'],
+                'Total Stakes': info['Total Stakes'].toFixed(2),
+                'Profit/Loss': info['Profit/Loss'].toFixed(2)
+            }));
+        }
+
+        function calculatePopularSelections(data) {
+            const selections = {};
+            data.forEach(record => {
+                const selection = record.ChosenTeamID || 'Unknown';
+                if (!selections[selection]) {
+                    selections[selection] = { 'Ticket Count': 0, 'Total Stakes': 0 };
+                }
+                selections[selection]['Ticket Count'] += 1;
+                selections[selection]['Total Stakes'] += parseFloat(record.FinalAmountWagered) || 0;
+            });
+            return Object.entries(selections).map(([selection, info]) => ({
+                Selection: selection,
+                'Ticket Count': info['Ticket Count'],
+                'Total Stakes': info['Total Stakes'].toFixed(2)
+            })).sort((a, b) => b['Ticket Count'] - a['Ticket Count']);
+        }
+
+        function calculateGameTiming(data) {
+            const hourly = {};
+            data.forEach(record => {
+                const date = new Date(record.PostedDateTime);
+                const hour = date.getHours().toString().padStart(2, '0') + ':00';
+                if (!hourly[hour]) hourly[hour] = 0;
+                hourly[hour] += 1;
+            });
+            return { 'Hourly Distribution': hourly };
+        }
+
+        function createTable(data, columnNames = null) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            if (!Array.isArray(data) || data.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.textContent = 'No data available';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                table.appendChild(tbody);
+                return table;
+            }
+
+            let headers = columnNames || Object.keys(data[0]);
+            let rows = data.map(obj => headers.map(header => obj[header] !== undefined ? obj[header] : ''));
+
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            rows.forEach(rowData => {
+                const row = document.createElement('tr');
+                rowData.forEach(cellData => {
+                    const td = document.createElement('td');
+                    td.textContent = typeof cellData === 'object' ? JSON.stringify(cellData) : cellData;
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            return table;
+        }
+
+        function createKeyValueTable(data) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const tbody = document.createElement('tbody');
+
+            for (const [key, value] of Object.entries(data)) {
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = JSON.stringify(value);
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                } else if (Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    if (value.length > 0 && typeof value[0] === 'object') {
+                        const subTable = createTable(value);
+                        valueCell.appendChild(subTable);
+                    } else {
+                        valueCell.textContent = JSON.stringify(value);
+                    }
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                } else {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = value;
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                }
+            }
+            table.appendChild(tbody);
+            return table;
+        }
+
+        function createBarChart(data, labels, values, label, title) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'data-chart';
+            canvas.style.display = 'none';
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: label }
+                        },
+                        x: { title: { display: true, text: 'Category' } }
+                    },
+                    plugins: {
+                        title: { display: true, text: title },
+                        legend: { display: false }
+                    }
+                }
+            });
+            return canvas;
+        }
+
+        function createPieChart(data, labels, values, label, title) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'data-chart';
+            canvas.style.display = 'none';
+            const colors = [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(249, 115, 22, 0.8)',
+                'rgba(168, 85, 247, 0.8)',
+                'rgba(20, 184, 166, 0.8)'
+            ];
+            new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: colors.slice(0, labels.length).map(color => color.replace('0.8', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: title },
+                        legend: { position: 'right', labels: { font: { size: 10 } } }
+                    }
+                }
+            });
+            return canvas;
+        }
+
+        function createLineChart(data, labels, values, label, title) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'data-chart';
+            canvas.style.display = 'none';
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { title: { display: true, text: label } },
+                        x: { title: { display: true, text: 'Time' } }
+                    },
+                    plugins: {
+                        title: { display: true, text: title },
+                        legend: { display: false }
+                    }
+                }
+            });
+            return canvas;
+        }
+
+        function toggleView() {
+            const table = document.getElementById('data-table');
+            const chart = document.getElementById('data-chart');
+            const button = document.querySelector('#toggle-view button');
+            if (table && chart) {
+                if (table.style.display === 'none') {
+                    table.style.display = 'table';
+                    chart.style.display = 'none';
+                    button.textContent = 'Show Chart';
+                } else {
+                    table.style.display = 'none';
+                    chart.style.display = 'block';
+                    button.textContent = 'Show Table';
+                }
+            }
+        }
+
+        function performAnalysis() {
+            if (!records) {
+                document.getElementById('betting-analysis-result').innerHTML = '<div class="loading">Waiting for client data...</div>';
+                return;
+            }
+            const resultDiv = document.getElementById('betting-analysis-result');
+            const toggleDiv = document.getElementById('toggle-view');
+            const analysisType = document.getElementById('analysis-type').value;
+            resultDiv.innerHTML = '<div class="loading">Analyzing...</div>';
+            toggleDiv.style.display = 'none';
+
+            let data;
+            try {
+                if (analysisType === 'metrics') {
+                    data = calculateMetrics(records);
+                } else if (analysisType === 'sport_breakdown') {
+                    data = calculateSportBreakdown(records);
+                } else if (analysisType === 'wager_type_breakdown') {
+                    data = calculateWagerTypeBreakdown(records);
+                } else if (analysisType === 'popular_selections') {
+                    data = calculatePopularSelections(records);
+                } else if (analysisType === 'game_timing') {
+                    data = calculateGameTiming(records);
+                }
+
+                resultDiv.innerHTML = '';
+                const subheader = document.createElement('div');
+                subheader.className = 'subheader';
+                subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+                resultDiv.appendChild(subheader);
+
+                let table, chart;
+                if (analysisType === 'metrics' || (typeof data === 'object' && !Array.isArray(data))) {
+                    table = createKeyValueTable(data);
+                    resultDiv.appendChild(table);
+                    const metricLabels = ['Total Stakes', 'Profit/Loss'];
+                    const metricValues = [parseFloat(data['Total Stakes']), parseFloat(data['Total Profit/Loss'])];
+                    chart = createBarChart({}, metricLabels, metricValues, 'Amount ($)', 'Financial Metrics');
+                } else if (Array.isArray(data)) {
+                    table = createTable(data);
+                    resultDiv.appendChild(table);
+                    const labels = data.map(item => item.Sport || item['Wager Type'] || item.Selection || 'Category');
+                    const values = data.map(item => parseFloat(item['Total Stakes']) || item['Bet Count'] || 0);
+                    chart = createPieChart(data, labels, values, 'Distribution', `${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} Distribution`);
+                } else {
+                    table = createTable([], ['No Data']);
+                    resultDiv.appendChild(table);
+                }
+
+                if (chart) {
+                    resultDiv.appendChild(chart);
+                    toggleDiv.style.display = 'block';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        performAnalysis();
+    </script>
+</body>
+</html>
