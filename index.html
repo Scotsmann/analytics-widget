@@ -150,7 +150,7 @@
             'wager_type_breakdown': { table: true, chart: true },
             'odds_breakdown': { table: true, chart: true },
             'popular_selections': { table: true, chart: true },
-            'game_timing': { table: false, chart: false }
+            'game_timing': { table: true, chart: true }
         };
 
         window.addEventListener('message', function(event) {
@@ -181,6 +181,7 @@
 
         function calculateMetrics(data) {
             let totalStakes = 0;
+            let totalReturn = 0;
             let totalProfitLoss = 0;
             let totalBets = 0;
             let totalWins = 0;
@@ -190,18 +191,20 @@
             let maxStake = 0;
             let minOdds = Infinity;
             let maxOdds = 0;
+            let totalPicks = 0;
 
-            const ticketNumbers = [...new Set(data.map(r => r.TicketNumber))];
-            totalBets = ticketNumbers.length;
+            const uniqueTickets = [...new Set(data.map(r => r.TicketNumber))];
+            totalBets = uniqueTickets.length;
 
             data.forEach(record => {
-                const wagered = parseFloat(record.AmountWagered) || 0;
+                const wagered = parseFloat(record.FinalAmountWagered) || 0;
                 const won = parseFloat(record.FinalAmountWon) || 0;
                 totalStakes += wagered;
+                totalReturn += won;
                 const profit = won - wagered;
                 totalProfitLoss += profit;
                 if (won > wagered) totalWins++;
-                if (won < wagered) totalLosses++;
+                if (won < wagered && won === 0) totalLosses++; // Assuming a loss is a return of 0
 
                 const odds = parseFloat(record.FinalDecimal) || 0;
                 if (odds > 0) {
@@ -214,31 +217,80 @@
                     minStake = Math.min(minStake, wagered);
                     maxStake = Math.max(maxStake, wagered);
                 }
+                
+                totalPicks += parseFloat(record.TotalPicks) || 0;
             });
+            
+            const roi = totalStakes > 0 ? ((totalProfitLoss / totalStakes) * 100).toFixed(2) : 0;
+            const avgPicks = totalBets > 0 ? (totalPicks / totalBets).toFixed(2) : 0;
+            const avgOdds = data.length > 0 ? (totalOdds / data.length).toFixed(2) : 0;
 
             return {
-                'Total Bets': totalBets,
-                'Total Stakes': totalStakes.toFixed(2),
-                'Total Profit/Loss': totalProfitLoss.toFixed(2),
-                'Win Rate': ((totalWins / totalBets) * 100).toFixed(2) + '%',
-                'Average Stake': (totalStakes / totalBets).toFixed(2),
+                'Unique Tickets': totalBets,
+                'Total Wagered': totalStakes.toFixed(2),
+                'Total Return': totalReturn.toFixed(2),
+                'Profit/Loss': totalProfitLoss.toFixed(2),
+                'ROI': roi + '%',
+                'Avg Stake': (totalStakes / totalBets).toFixed(2),
                 'Min Stake': minStake !== Infinity ? minStake.toFixed(2) : 'N/A',
                 'Max Stake': maxStake.toFixed(2),
-                'Average Odds (Decimal)': (totalOdds / data.length).toFixed(2),
-                'Min Odds (Decimal)': minOdds !== Infinity ? minOdds.toFixed(2) : 'N/A',
-                'Max Odds (Decimal)': maxOdds.toFixed(2),
-                'Total Wins': totalWins,
-                'Total Losses': totalLosses
+                'Avg Picks': avgPicks,
+                'Avg Odds': avgOdds,
+                'Min Odds': minOdds !== Infinity ? minOdds.toFixed(2) : 'N/A',
+                'Max Odds': maxOdds.toFixed(2),
+                'Pending Bets': data.filter(r => r.FinalAmountWon === null).length
             };
+        }
+
+        function calculateBreakdown(data, groupBy, type) {
+            const breakdown = {};
+            const totalBets = [...new Set(records.map(r => r.TicketNumber))].length;
+            const validRecords = data.filter(record => record[groupBy]);
+
+            validRecords.forEach(record => {
+                const group = record[groupBy];
+                if (!breakdown[group]) {
+                    breakdown[group] = { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0, 'ROI': 0 };
+                }
+                breakdown[group]['Bet Count'] += 1;
+                const wagered = parseFloat(record.FinalAmountWagered) || 0;
+                const won = parseFloat(record.FinalAmountWon) || 0;
+                breakdown[group]['Total Stakes'] += wagered;
+                breakdown[group]['Profit/Loss'] += (won - wagered);
+            });
+
+            return Object.entries(breakdown).map(([group, info]) => {
+                const betRatio = (info['Bet Count'] / totalBets) * 100;
+                const avgStake = info['Bet Count'] > 0 ? (info['Total Stakes'] / info['Bet Count']) : 0;
+                const roi = info['Total Stakes'] > 0 ? ((info['Profit/Loss'] / info['Total Stakes']) * 100) : 0;
+                
+                let result = {
+                    [type]: group,
+                    'Bet Count': info['Bet Count'],
+                    'Bet Ratio (%)': betRatio.toFixed(2),
+                    'Total Stakes': info['Total Stakes'].toFixed(2),
+                    'Avg Stake': avgStake.toFixed(2),
+                    'Profit/Loss': info['Profit/Loss'].toFixed(2),
+                    'ROI (%)': roi.toFixed(2)
+                };
+
+                // Remove Avg Stake for Wager Type to match the example
+                if (type === 'Wager Type') {
+                    delete result['Avg Stake'];
+                }
+                
+                return result;
+            });
         }
 
         function calculateOddsBreakdown(data) {
             const oddsBreakdown = {
-                '< 2.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0, 'ROI': 0 },
-                '2.0 - 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0, 'ROI': 0 },
-                '> 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0, 'ROI': 0 },
-                'N/A': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0, 'ROI': 0 }
+                '< 2.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
+                '2.0 - 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
+                '> 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
+                'N/A': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 }
             };
+            const totalBets = [...new Set(records.map(r => r.TicketNumber))].length;
 
             data.forEach(record => {
                 const odds = parseFloat(record.FinalDecimal);
@@ -256,95 +308,92 @@
                 oddsBreakdown[category]['Profit/Loss'] += (won - wagered);
             });
 
-            // Calculate ROI for each category
-            for (const category in oddsBreakdown) {
-                const info = oddsBreakdown[category];
-                if (info['Total Stakes'] > 0) {
-                    info['ROI'] = ((info['Profit/Loss'] / info['Total Stakes']) * 100).toFixed(2) + '%';
-                } else {
-                    info['ROI'] = 'N/A';
-                }
-            }
-
-            return Object.entries(oddsBreakdown).map(([oddsRange, info]) => ({
-                'Odds Range': oddsRange,
-                'Bet Count': info['Bet Count'],
-                'Total Stakes': info['Total Stakes'].toFixed(2),
-                'Profit/Loss': info['Profit/Loss'].toFixed(2),
-                'ROI': info['ROI']
-            }));
-        }
-
-        function calculateSportBreakdown(data) {
-            const breakdown = {};
-            data.forEach(record => {
-                const sport = record.SportType || 'Unknown';
-                if (!breakdown[sport]) {
-                    breakdown[sport] = { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 };
-                }
-                breakdown[sport]['Bet Count'] += 1;
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-                breakdown[sport]['Total Stakes'] += wagered;
-                breakdown[sport]['Profit/Loss'] += (won - wagered);
+            return Object.entries(oddsBreakdown).map(([oddsRange, info]) => {
+                const betRatio = (info['Bet Count'] / totalBets) * 100;
+                const roi = info['Total Stakes'] > 0 ? ((info['Profit/Loss'] / info['Total Stakes']) * 100) : 0;
+                return {
+                    'Odds Range': oddsRange,
+                    'Bet Count': info['Bet Count'],
+                    'Bet Ratio (%)': betRatio.toFixed(2),
+                    'Total Stakes': info['Total Stakes'].toFixed(2),
+                    'Profit/Loss': info['Profit/Loss'].toFixed(2),
+                    'ROI (%)': roi.toFixed(2)
+                };
             });
-            return Object.entries(breakdown).map(([sport, info]) => ({
-                Sport: sport,
-                'Bet Count': info['Bet Count'],
-                'Total Stakes': info['Total Stakes'].toFixed(2),
-                'Profit/Loss': info['Profit/Loss'].toFixed(2)
-            }));
-        }
-
-        function calculateWagerTypeBreakdown(data) {
-            const breakdown = {};
-            data.forEach(record => {
-                const wagerType = record.WagerType || 'Unknown';
-                if (!breakdown[wagerType]) {
-                    breakdown[wagerType] = { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 };
-                }
-                breakdown[wagerType]['Bet Count'] += 1;
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-                breakdown[wagerType]['Total Stakes'] += wagered;
-                breakdown[wagerType]['Profit/Loss'] += (won - wagered);
-            });
-            return Object.entries(breakdown).map(([wagerType, info]) => ({
-                'Wager Type': wagerType,
-                'Bet Count': info['Bet Count'],
-                'Total Stakes': info['Total Stakes'].toFixed(2),
-                'Profit/Loss': info['Profit/Loss'].toFixed(2)
-            }));
         }
 
         function calculatePopularSelections(data) {
             const selections = {};
             data.forEach(record => {
                 const selection = record.ChosenTeamID || 'Unknown';
+                const sport = record.SportType || 'Unknown';
                 if (!selections[selection]) {
-                    selections[selection] = { 'Ticket Count': 0, 'Total Stakes': 0 };
+                    selections[selection] = { 'Ticket Count': 0, 'Sport Type': sport };
                 }
                 selections[selection]['Ticket Count'] += 1;
-                selections[selection]['Total Stakes'] += parseFloat(record.FinalAmountWagered) || 0;
             });
             return Object.entries(selections).map(([selection, info]) => ({
-                Selection: selection,
+                'Selection': selection,
                 'Ticket Count': info['Ticket Count'],
-                'Total Stakes': info['Total Stakes'].toFixed(2)
+                'Sport Type': info['Sport Type']
             })).sort((a, b) => b['Ticket Count'] - a['Ticket Count']);
         }
 
         function calculateGameTiming(data) {
-            const hourly = {};
-            data.forEach(record => {
-                if (record.PostedDateTime) {
-                    const date = new Date(record.PostedDateTime);
-                    const hour = date.getHours().toString().padStart(2, '0') + ':00';
-                    if (!hourly[hour]) hourly[hour] = 0;
-                    hourly[hour] += 1;
-                }
+            const validRecords = data.filter(r => r.PostedDateTime && r.GameDateTime);
+            let totalHoursBeforeGame = 0;
+            const timeBins = { '<1 hour': 0, '1-6 hours': 0, '6-24 hours': 0, '24-48 hours': 0, '>48 hours': 0 };
+            const sportTiming = {};
+            const wagerTiming = {};
+            const highStakes = [];
+            const regularStakes = [];
+            
+            validRecords.forEach(record => {
+                const postedTime = new Date(record.PostedDateTime);
+                const gameTime = new Date(record.GameDateTime);
+                const diffHours = (gameTime - postedTime) / (1000 * 60 * 60);
+
+                if (diffHours < 1) timeBins['<1 hour']++;
+                else if (diffHours >= 1 && diffHours < 6) timeBins['1-6 hours']++;
+                else if (diffHours >= 6 && diffHours < 24) timeBins['6-24 hours']++;
+                else if (diffHours >= 24 && diffHours < 48) timeBins['24-48 hours']++;
+                else if (diffHours >= 48) timeBins['>48 hours']++;
+                
+                totalHoursBeforeGame += diffHours;
+                
+                const sport = record.SportType || 'Unknown';
+                if (!sportTiming[sport]) sportTiming[sport] = { totalHours: 0, count: 0 };
+                sportTiming[sport].totalHours += diffHours;
+                sportTiming[sport].count++;
+
+                const wagerType = record.WagerType || 'Unknown';
+                if (!wagerTiming[wagerType]) wagerTiming[wagerType] = { totalHours: 0, count: 0 };
+                wagerTiming[wagerType].totalHours += diffHours;
+                wagerTiming[wagerType].count++;
+
+                if (record.FinalAmountWagered > 1000) highStakes.push(diffHours);
+                else regularStakes.push(diffHours);
             });
-            return { 'Hourly Distribution': hourly };
+
+            const avgHours = totalHoursBeforeGame / validRecords.length;
+            const avgHighStakeHours = highStakes.length > 0 ? highStakes.reduce((a, b) => a + b, 0) / highStakes.length : 'N/A';
+            const avgRegularHours = regularStakes.length > 0 ? regularStakes.reduce((a, b) => a + b, 0) / regularStakes.length : 'N/A';
+            const totalWithin6Hours = timeBins['<1 hour'] + timeBins['1-6 hours'];
+            const fact = `${((totalWithin6Hours / validRecords.length) * 100).toFixed(1)}% of bets are placed within 6 hours of game start`;
+
+            const sportTimingTable = Object.entries(sportTiming).map(([sport, info]) => ({ 'Sport Type': sport, 'Avg Hours': (info.totalHours / info.count).toFixed(2) }));
+            const wagerTimingTable = Object.entries(wagerTiming).map(([wager, info]) => ({ 'Wager Type': wager, 'Avg Hours': (info.totalHours / info.count).toFixed(2) }));
+
+            return {
+                'avg_hours_before_game': avgHours.toFixed(2),
+                'time_bins': timeBins,
+                'sport_timing': sportTimingTable,
+                'wager_timing': wagerTimingTable,
+                'avg_high_stake_hours': avgHighStakeHours !== 'N/A' ? avgHighStakeHours.toFixed(2) : 'N/A',
+                'avg_regular_hours': avgRegularHours !== 'N/A' ? avgRegularHours.toFixed(2) : 'N/A',
+                'interesting_fact': fact,
+                'total_valid_bets': validRecords.length
+            };
         }
 
         function createTable(data, columnNames = null) {
@@ -453,7 +502,51 @@
             });
             return chartDiv;
         }
-        
+
+        function createKeyValueTable(data) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const tbody = document.createElement('tbody');
+
+            for (const [key, value] of Object.entries(data)) {
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = JSON.stringify(value);
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                } else if (Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    if (value.length > 0 && typeof value[0] === 'object') {
+                        const subTable = createTable(value);
+                        valueCell.appendChild(subTable);
+                    } else {
+                        valueCell.textContent = JSON.stringify(value);
+                    }
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                } else {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = value;
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                }
+            }
+            table.appendChild(tbody);
+            return table;
+        }
+
         function toggleView() {
             const chartDiv = document.querySelector('#betting-analysis-result canvas');
             const table = document.getElementById('data-table');
@@ -488,22 +581,23 @@
             currentView = 'table';
             
             let data, table, chart = null;
+            let title = '';
 
             try {
                 if (analysisType === 'metrics') {
                     data = calculateMetrics(records);
-                    const formattedData = Object.entries(data).map(([key, value]) => ({ Metric: key, Value: value }));
-                    table = createTable(formattedData, ['Metric', 'Value']);
+                    table = createKeyValueTable(data);
                     resultDiv.appendChild(table);
+                    title = 'Metrics';
                 } else if (analysisType === 'sport_breakdown') {
-                    data = calculateSportBreakdown(records);
+                    data = calculateBreakdown(records, 'SportType', 'Sport');
                     table = createTable(data);
                     resultDiv.appendChild(table);
                     const labels = data.map(item => item.Sport);
                     const values = data.map(item => parseFloat(item['Bet Count']));
                     chart = createPieChart(data, labels, values, 'Sport Breakdown (Bet Count)');
                 } else if (analysisType === 'wager_type_breakdown') {
-                    data = calculateWagerTypeBreakdown(records);
+                    data = calculateBreakdown(records, 'WagerType', 'Wager Type');
                     table = createTable(data);
                     resultDiv.appendChild(table);
                     const labels = data.map(item => item['Wager Type']);
@@ -525,13 +619,17 @@
                     chart = createBarChart(data, labels, values, 'Ticket Count', 'Popular Selections');
                 } else if (analysisType === 'game_timing') {
                     data = calculateGameTiming(records);
-                    const formattedData = Object.entries(data['Hourly Distribution']).map(([hour, count]) => ({ 'Hour': hour, 'Bet Count': count }));
-                    table = createTable(formattedData);
+                    table = createKeyValueTable(data);
                     resultDiv.appendChild(table);
-                    const labels = Object.keys(data['Hourly Distribution']);
-                    const values = Object.values(data['Hourly Distribution']);
+                    const labels = Object.keys(data['time_bins']);
+                    const values = Object.values(data['time_bins']);
                     chart = createBarChart(data, labels, values, 'Bet Count', 'Hourly Betting Activity');
                 }
+
+                const subheader = document.createElement('div');
+                subheader.className = 'subheader';
+                subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+                resultDiv.prepend(subheader);
 
                 if (chart) {
                     resultDiv.appendChild(chart);
