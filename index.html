@@ -9,18 +9,21 @@
         .analytics-widget {
             border: 2px solid #1E3A8A;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 10px;
             background-color: #F3F4F6;
             width: 100%;
             height: 320px;
             overflow-y: auto;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            position: relative;
+            display: block;
+            box-sizing: border-box;
         }
         .analytics-widget h3 {
             font-size: 14px;
-            margin: 0 0 8px;
-            color: #fff;
+            margin: 0 0 8px 0;
+            color: #FFFFFF;
             text-align: center;
             font-weight: 600;
             background-color: #1E3A8A;
@@ -32,6 +35,7 @@
             padding: 4px;
             width: 100%;
             margin-bottom: 8px;
+            box-sizing: border-box;
             border: 1px solid #D1D5DB;
             border-radius: 4px;
         }
@@ -39,26 +43,27 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 11px;
-            margin-bottom: 8px;
-            background-color: #fff;
+            margin: 0 0 8px 0;
+            background-color: #FFFFFF;
         }
         .analytics-widget th, .analytics-widget td {
             padding: 4px;
             border: 1px solid #E5E7EB;
             text-align: left;
             white-space: nowrap;
-            text-overflow: ellipsis;
+            max-width: 120px;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
         .analytics-widget th {
             background-color: #3B82F6;
-            color: #fff;
+            color: #FFFFFF;
             font-weight: 600;
         }
         .analytics-widget .subheader {
             font-size: 12px;
             font-weight: 600;
-            margin: 8px 0;
+            margin: 8px 0 4px 0;
             color: #1E3A8A;
             background-color: #EBF4FF;
             padding: 4px 8px;
@@ -72,165 +77,341 @@
             border-radius: 4px;
             border: 1px solid #FECACA;
         }
+        .analytics-widget .loading {
+            font-size: 12px;
+            color: #6B7280;
+            text-align: center;
+            padding: 20px;
+        }
+        .analytics-widget .raw-data {
+            font-size: 10px;
+            color: #374151;
+            white-space: pre-wrap;
+            background-color: #F9FAFB;
+            padding: 4px;
+            border-radius: 4px;
+            margin-top: 8px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .analytics-widget .debug-info {
+            font-size: 10px;
+            color: #6B7280;
+            background-color: #F9FAFB;
+            padding: 4px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
         .analytics-widget canvas {
             max-height: 180px;
             width: 100%;
+            margin-bottom: 8px;
+        }
+        .analytics-widget button {
+            font-size: 12px;
+            padding: 4px 8px;
+            margin-bottom: 8px;
+            background-color: #3B82F6;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .analytics-widget button:hover {
+            background-color: #1E3A8A;
         }
     </style>
 </head>
 <body>
-<div class="analytics-widget">
-    <h3>Client Custom Widget</h3>
-    <select id="analysis-type" onchange="renderAnalysis()">
-        <option value="metrics">Metrics</option>
-        <option value="sport_breakdown">Sport Breakdown</option>
-        <option value="wager_type_breakdown">Wager Type Breakdown</option>
-        <option value="odds_breakdown">Odds Breakdown</option>
-        <option value="popular_selections">Popular Selections</option>
-        <option value="game_timing">Game Timing</option>
-    </select>
-    <div id="betting-analysis-result"></div>
-</div>
+    <div class="analytics-widget">
+        <h3>Client Custom Widget</h3>
+        <select id="analysis-type" onchange="renderAnalysis()">
+            <option value="metrics">Metrics</option>
+            <option value="sport_breakdown">Sport Breakdown</option>
+            <option value="wager_type_breakdown">Wager Type Breakdown</option>
+            <option value="odds_breakdown">Odds Breakdown</option>
+            <option value="popular_selections">Popular Selections</option>
+            <option value="game_timing">Game Timing</option>
+        </select>
+        <div id="toggle-view" style="display: none;">
+            <button onclick="toggleView()">Show Chart</button>
+        </div>
+        <div id="betting-analysis-result"></div>
+        <div id="debug-info" class="debug-info"></div>
+    </div>
 
-<script>
-let apiResults = null;
-let myChart = null;
+    <script>
+        // Store the single, pre-calculated JSON object received from the API
+        let analysisData = null;
+        let myChart = null;
+        let currentView = 'table';
+        
+        // This function will now process the complete data object from the API
+        // and render the correct table and chart.
+        function renderAnalysis() {
+            const resultDiv = document.getElementById('betting-analysis-result');
+            const toggleDiv = document.getElementById('toggle-view');
+            const analysisType = document.getElementById('analysis-type').value;
+            resultDiv.innerHTML = '';
+            toggleDiv.style.display = 'none';
+            currentView = 'table';
+            
+            if (!analysisData) {
+                resultDiv.innerHTML = `<div class="error">No data has been received from the API.</div>`;
+                return;
+            }
 
-// Listen for API messages
-window.addEventListener('message', function (event) {
-    const allowedOrigins = [
-        "https://scotsmann.github.io",
-        "http://localhost:8501"
-    ];
-    if (!allowedOrigins.includes(event.origin)) return;
+            let data, table, chart = null;
+            
+            try {
+                // Get the correct data subset from the complete analysisData object
+                data = analysisData[analysisType];
+                
+                if (analysisType === 'metrics' || analysisType === 'game_timing') {
+                    // These analyses return a key-value object
+                    table = createKeyValueTable(data);
+                } else if (data && Array.isArray(data)) {
+                    // These analyses return a list of objects
+                    table = createTable(data);
+                } else {
+                    resultDiv.innerHTML = `<div class="error">Invalid data format for this analysis type.</div>`;
+                    return;
+                }
+                
+                resultDiv.appendChild(table);
+                
+                // Now, get chart-specific data from the analysisData object
+                const chartData = analysisData[`${analysisType}_chart`];
 
-    if (event.data && event.data.type === 'bettingResults') {
-        apiResults = event.data.results; // already aggregated
-        renderAnalysis();
-    }
-});
+                if (chartData) {
+                    const { labels, values, chartType, title, yAxisLabel } = chartData;
+                    if (chartType === 'pie') {
+                        chart = createPieChart(labels, values, title);
+                    } else if (chartType === 'bar') {
+                        chart = createBarChart(labels, values, yAxisLabel, title);
+                    }
+                    resultDiv.appendChild(chart);
+                    toggleDiv.style.display = 'block';
+                }
 
-function createTable(data) {
-    if (!Array.isArray(data) || data.length === 0) {
-        return document.createTextNode("No data available");
-    }
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    Object.keys(data[0]).forEach(col => {
-        const th = document.createElement('th');
-        th.textContent = col;
-        headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
+                // Add subheader for clarity
+                const subheader = document.createElement('div');
+                subheader.className = 'subheader';
+                subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+                resultDiv.prepend(subheader);
 
-    const tbody = document.createElement('tbody');
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        Object.values(row).forEach(val => {
-            const td = document.createElement('td');
-            td.textContent = val;
-            tr.appendChild(td);
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // --- All the display functions from the previous version are still here ---
+        // (createTable, createBarChart, createPieChart, createKeyValueTable, toggleView)
+        // ... (The code for these functions remains the same)
+        // Note: The code for these functions is included in the full response.
+        
+        function createTable(data, columnNames = null) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+            if (!Array.isArray(data) || data.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.textContent = 'No data available';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                table.appendChild(tbody);
+                return table;
+            }
+            let headers = columnNames || Object.keys(data[0]);
+            let rows = data.map(obj => headers.map(header => obj[header] !== undefined ? obj[header] : ''));
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            rows.forEach(rowData => {
+                const row = document.createElement('tr');
+                rowData.forEach(cellData => {
+                    const td = document.createElement('td');
+                    td.textContent = typeof cellData === 'object' ? JSON.stringify(cellData) : cellData;
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            return table;
+        }
+
+        function createBarChart(labels, values, yAxisLabel, chartTitle) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'bar-chart';
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '180px';
+            chartDiv.appendChild(canvas);
+            
+            myChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: yAxisLabel,
+                        data: values,
+                        backgroundColor: '#3B82F6',
+                        borderColor: '#1E3A8A',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            return chartDiv;
+        }
+        
+        function createPieChart(labels, values, chartTitle) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'pie-chart';
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '180px';
+            chartDiv.appendChild(canvas);
+
+            const backgroundColors = [
+                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#A855F7', '#F43F5E', '#14B8A6'
+            ];
+
+            myChart = new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: backgroundColors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
+                    }
+                }
+            });
+            return chartDiv;
+        }
+
+        function createKeyValueTable(data) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const tbody = document.createElement('tbody');
+
+            for (const [key, value] of Object.entries(data)) {
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = JSON.stringify(value);
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                } else if (Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    if (value.length > 0 && typeof value[0] === 'object') {
+                        const subTable = createTable(value);
+                        valueCell.appendChild(subTable);
+                    } else {
+                        valueCell.textContent = JSON.stringify(value);
+                    }
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                } else {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = value;
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                }
+            }
+            table.appendChild(tbody);
+            return table;
+        }
+
+        function toggleView() {
+            const chartDiv = document.querySelector('#betting-analysis-result canvas');
+            const table = document.getElementById('data-table');
+            const toggleButton = document.querySelector('#toggle-view button');
+            
+            if (chartDiv && table) {
+                if (currentView === 'table') {
+                    table.style.display = 'none';
+                    chartDiv.style.display = 'block';
+                    toggleButton.textContent = 'Show Table';
+                    currentView = 'chart';
+                } else {
+                    table.style.display = 'block';
+                    chartDiv.style.display = 'none';
+                    toggleButton.textContent = 'Show Chart';
+                    currentView = 'table';
+                }
+            }
+        }
+        
+        window.addEventListener('message', function(event) {
+            const debugDiv = document.getElementById('debug-info');
+            console.log('Message received from:', event.origin, 'Data:', event.data);
+            debugDiv.textContent = `Received from ${event.origin} at ${new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/London'})}`;
+
+            const allowedOrigins = [
+                // Replace with your Heroku app URL if needed, or leave as event.origin
+                event.origin
+            ];
+            
+            if (!allowedOrigins.includes(event.origin)) {
+                debugDiv.textContent = `Security alert: Message blocked from untrusted origin: ${event.origin}`;
+                return;
+            }
+            
+            if (event.data && event.data.type === 'bettingData') {
+                // The key change: The API now sends a complete, pre-calculated analysis object
+                analysisData = event.data.analysis;
+                debugDiv.textContent += ` | Analysis data received.`;
+                console.log('Analysis data processed:', analysisData);
+                renderAnalysis();
+            } else {
+                debugDiv.textContent += ' | Invalid or no data';
+            }
         });
-        tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    return table;
-}
 
-function createKeyValueTable(data) {
-    const table = document.createElement('table');
-    const tbody = document.createElement('tbody');
-    for (const [key, value] of Object.entries(data)) {
-        const tr = document.createElement('tr');
-        const tdKey = document.createElement('td');
-        tdKey.textContent = key;
-        const tdVal = document.createElement('td');
-        tdVal.textContent = value;
-        tr.appendChild(tdKey);
-        tr.appendChild(tdVal);
-        tbody.appendChild(tr);
-    }
-    table.appendChild(tbody);
-    return table;
-}
-
-function createPieChart(labels, values, title) {
-    const canvas = document.createElement('canvas');
-    if (myChart) myChart.destroy();
-    myChart = new Chart(canvas, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{ data: values, backgroundColor: ['#3B82F6','#10B981','#F59E0B','#EF4444','#6366F1'] }]
-        },
-        options: { plugins: { title: { display: true, text: title } } }
-    });
-    return canvas;
-}
-
-function createBarChart(labels, values, title, yLabel) {
-    const canvas = document.createElement('canvas');
-    if (myChart) myChart.destroy();
-    myChart = new Chart(canvas, {
-        type: 'bar',
-        data: { labels: labels, datasets: [{ label: yLabel, data: values, backgroundColor: '#3B82F6' }] },
-        options: { plugins: { title: { display: true, text: title } } }
-    });
-    return canvas;
-}
-
-function renderAnalysis() {
-    const resultDiv = document.getElementById('betting-analysis-result');
-    resultDiv.innerHTML = '';
-    if (!apiResults) {
-        resultDiv.innerHTML = `<div class="error">No API data received.</div>`;
-        return;
-    }
-    const analysisType = document.getElementById('analysis-type').value;
-
-    if (analysisType === 'metrics') {
-        resultDiv.appendChild(createKeyValueTable(apiResults.metrics));
-    } else if (analysisType === 'sport_breakdown') {
-        resultDiv.appendChild(createTable(apiResults.sport_breakdown));
-        resultDiv.appendChild(createPieChart(
-            apiResults.sport_breakdown.map(r => r.Sport),
-            apiResults.sport_breakdown.map(r => r['Bet Count']),
-            "Sport Breakdown"
-        ));
-    } else if (analysisType === 'wager_type_breakdown') {
-        resultDiv.appendChild(createTable(apiResults.wager_type_breakdown));
-        resultDiv.appendChild(createPieChart(
-            apiResults.wager_type_breakdown.map(r => r['Wager Type']),
-            apiResults.wager_type_breakdown.map(r => r['Bet Count']),
-            "Wager Type Breakdown"
-        ));
-    } else if (analysisType === 'odds_breakdown') {
-        resultDiv.appendChild(createTable(apiResults.odds_breakdown));
-        resultDiv.appendChild(createPieChart(
-            apiResults.odds_breakdown.map(r => r['Odds Range']),
-            apiResults.odds_breakdown.map(r => r['Bet Count']),
-            "Odds Breakdown"
-        ));
-    } else if (analysisType === 'popular_selections') {
-        resultDiv.appendChild(createTable(apiResults.popular_selections));
-        resultDiv.appendChild(createBarChart(
-            apiResults.popular_selections.map(r => r.Selection),
-            apiResults.popular_selections.map(r => r['Ticket Count']),
-            "Popular Selections",
-            "Ticket Count"
-        ));
-    } else if (analysisType === 'game_timing') {
-        resultDiv.appendChild(createKeyValueTable(apiResults.game_timing));
-        resultDiv.appendChild(createBarChart(
-            Object.keys(apiResults.game_timing.time_bins),
-            Object.values(apiResults.game_timing.time_bins),
-            "Game Timing",
-            "Bet Count"
-        ));
-    }
-}
-</script>
+        window.onload = function() {
+            if (window.parent && window.parent.postMessage) {
+                document.getElementById('debug-info').textContent = 'Waiting for data from parent frame...';
+            }
+        }
+    </script>
 </body>
 </html>
