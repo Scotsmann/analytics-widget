@@ -238,18 +238,20 @@
             const roi = totalStakes > 0 ? ((totalProfitLoss / totalStakes) * 100).toFixed(2) : 0;
             const avgPicks = totalBets > 0 ? (totalPicks / totalBets).toFixed(2) : 0;
             const avgOdds = data.length > 0 ? (totalOdds / data.length).toFixed(2) : 0;
+            const winRate = totalBets > 0 ? ((totalWins / totalBets) * 100).toFixed(2) : 0;
 
             return {
-                'Unique Tickets': totalBets,
-                'Total Wagered': totalStakes.toFixed(2),
+                'Total Bets': totalBets,
+                'Total Stake': totalStakes.toFixed(2),
                 'Total Return': totalReturn.toFixed(2),
                 'Profit/Loss': totalProfitLoss.toFixed(2),
-                'ROI': roi + '%',
-                'Avg Stake': (totalStakes / totalBets).toFixed(2),
+                'ROI (%)': roi + '%',
+                'Win Rate (%)': winRate + '%',
+                'Average Odds': avgOdds,
+                'Average Stake': (totalStakes / totalBets).toFixed(2),
                 'Min Stake': minStake !== Infinity ? minStake.toFixed(2) : 'N/A',
                 'Max Stake': maxStake.toFixed(2),
                 'Avg Picks': avgPicks,
-                'Avg Odds': avgOdds,
                 'Min Odds': minOdds !== Infinity ? minOdds.toFixed(2) : 'N/A',
                 'Max Odds': maxOdds.toFixed(2),
                 'Pending Bets': data.filter(r => r.FinalAmountWon === null).length
