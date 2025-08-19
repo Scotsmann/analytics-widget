@@ -171,16 +171,15 @@
             console.log('Message received from:', event.origin, 'Data:', event.data);
             debugDiv.textContent = `Received from ${event.origin} at ${new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/London' })}`;
 
-            // IMPORTANT: Security check - ensure message is from a trusted origin
             const allowedOrigins = [
                 // Add your client's domains here. Example:
                 // "https://your-client-website.com",
                 "https://scotsmann.github.io", // Your own domain for testing
-                "http://localhost:8501" // <--- ADDED THIS FOR LOCAL STREAMLIT TESTING
+                "http://localhost:8501"
             ];
             if (!allowedOrigins.includes(event.origin)) {
                 debugDiv.textContent = `Security alert: Message blocked from untrusted origin: ${event.origin}`;
-                return; // Exit if the origin is not allowed
+                return;
             }
 
             if (event.data && event.data.type === 'bettingData') {
@@ -193,228 +192,12 @@
             }
         });
 
-        function calculateMetrics(data) {
-            let totalStakes = 0;
-            let totalReturn = 0;
-            let totalProfitLoss = 0;
-            let totalBets = 0;
-            let totalWins = 0;
-            let totalLosses = 0;
-            let totalOdds = 0;
-            let minStake = Infinity;
-            let maxStake = 0;
-            let minOdds = Infinity;
-            let maxOdds = 0;
-            let totalPicks = 0;
-
-            const uniqueTickets = [...new Set(data.map(r => r.TicketNumber))];
-            totalBets = uniqueTickets.length;
-
-            data.forEach(record => {
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-                totalStakes += wagered;
-                totalReturn += won;
-                const profit = won - wagered;
-                totalProfitLoss += profit;
-                if (won > wagered) totalWins++;
-                if (won < wagered && won === 0) totalLosses++; // Assuming a loss is a return of 0
-
-                const odds = parseFloat(record.FinalDecimal) || 0;
-                if (odds > 0) {
-                    totalOdds += odds;
-                    minOdds = Math.min(minOdds, odds);
-                    maxOdds = Math.max(maxOdds, odds);
-                }
-
-                if (wagered > 0) {
-                    minStake = Math.min(minStake, wagered);
-                    maxStake = Math.max(maxStake, wagered);
-                }
-
-                totalPicks += parseFloat(record.TotalPicks) || 0;
-            });
-
-            const roi = totalStakes > 0 ? ((totalProfitLoss / totalStakes) * 100).toFixed(2) : 0;
-            const avgPicks = totalBets > 0 ? (totalPicks / totalBets).toFixed(2) : 0;
-            const avgOdds = data.length > 0 ? (totalOdds / data.length).toFixed(2) : 0;
-
-            return {
-                'Unique Tickets': totalBets,
-                'Total Wagered': totalStakes.toFixed(2),
-                'Total Return': totalReturn.toFixed(2),
-                'Profit/Loss': totalProfitLoss.toFixed(2),
-                'ROI': roi + '%',
-                'Avg Stake': (totalStakes / totalBets).toFixed(2),
-                'Min Stake': minStake !== Infinity ? minStake.toFixed(2) : 'N/A',
-                'Max Stake': maxStake.toFixed(2),
-                'Avg Picks': avgPicks,
-                'Avg Odds': avgOdds,
-                'Min Odds': minOdds !== Infinity ? minOdds.toFixed(2) : 'N/A',
-                'Max Odds': maxOdds.toFixed(2),
-                'Pending Bets': data.filter(r => r.FinalAmountWon === null).length
-            };
-        }
-
-        function calculateBreakdown(data, groupBy, type) {
-            const breakdown = {};
-            const totalBets = [...new Set(records.map(r => r.TicketNumber))].length;
-            const validRecords = data.filter(record => record[groupBy]);
-
-            validRecords.forEach(record => {
-                const group = record[groupBy];
-                if (!breakdown[group]) {
-                    breakdown[group] = { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0, 'ROI': 0 };
-                }
-                breakdown[group]['Bet Count'] += 1;
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-                breakdown[group]['Total Stakes'] += wagered;
-                breakdown[group]['Profit/Loss'] += (won - wagered);
-            });
-
-            return Object.entries(breakdown).map(([group, info]) => {
-                const betRatio = (info['Bet Count'] / totalBets) * 100;
-                const avgStake = info['Bet Count'] > 0 ? (info['Total Stakes'] / info['Bet Count']) : 0;
-                const roi = info['Total Stakes'] > 0 ? ((info['Profit/Loss'] / info['Total Stakes']) * 100) : 0;
-
-                let result = {
-                    [type]: group,
-                    'Bet Count': info['Bet Count'],
-                    'Bet Ratio (%)': betRatio.toFixed(2),
-                    'Total Stakes': info['Total Stakes'].toFixed(2),
-                    'Avg Stake': avgStake.toFixed(2),
-                    'Profit/Loss': info['Profit/Loss'].toFixed(2),
-                    'ROI (%)': roi.toFixed(2)
-                };
-
-                // Remove Avg Stake for Wager Type to match the example
-                if (type === 'Wager Type') {
-                    delete result['Avg Stake'];
-                }
-
-                return result;
-            });
-        }
-
-        function calculateOddsBreakdown(data) {
-            const oddsBreakdown = {
-                '< 2.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
-                '2.0 - 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
-                '> 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
-                'N/A': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 }
-            };
-            const totalBets = [...new Set(records.map(r => r.TicketNumber))].length;
-
-            data.forEach(record => {
-                const odds = parseFloat(record.FinalDecimal);
-                let category = 'N/A';
-                if (odds) {
-                    if (odds < 2.0) category = '< 2.0';
-                    else if (odds >= 2.0 && odds <= 5.0) category = '2.0 - 5.0';
-                    else if (odds > 5.0) category = '> 5.0';
-                }
-
-                oddsBreakdown[category]['Bet Count']++;
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-                oddsBreakdown[category]['Total Stakes'] += wagered;
-                oddsBreakdown[category]['Profit/Loss'] += (won - wagered);
-            });
-
-            return Object.entries(oddsBreakdown).map(([oddsRange, info]) => {
-                const betRatio = (info['Bet Count'] / totalBets) * 100;
-                const roi = info['Total Stakes'] > 0 ? ((info['Profit/Loss'] / info['Total Stakes']) * 100) : 0;
-                return {
-                    'Odds Range': oddsRange,
-                    'Bet Count': info['Bet Count'],
-                    'Bet Ratio (%)': betRatio.toFixed(2),
-                    'Total Stakes': info['Total Stakes'].toFixed(2),
-                    'Profit/Loss': info['Profit/Loss'].toFixed(2),
-                    'ROI (%)': roi.toFixed(2)
-                };
-            });
-        }
-
-        function calculatePopularSelections(data) {
-            const selections = {};
-            data.forEach(record => {
-                const selection = record.ChosenTeamID || 'Unknown';
-                const sport = record.SportType || 'Unknown';
-                if (!selections[selection]) {
-                    selections[selection] = { 'Ticket Count': 0, 'Sport Type': sport };
-                }
-                selections[selection]['Ticket Count'] += 1;
-            });
-            return Object.entries(selections).map(([selection, info]) => ({
-                'Selection': selection,
-                'Ticket Count': info['Ticket Count'],
-                'Sport Type': info['Sport Type']
-            })).sort((a, b) => b['Ticket Count'] - a['Ticket Count']);
-        }
-
-        function calculateGameTiming(data) {
-            const validRecords = data.filter(r => r.PostedDateTime && r.GameDateTime);
-            let totalHoursBeforeGame = 0;
-            const timeBins = { '<1 hour': 0, '1-6 hours': 0, '6-24 hours': 0, '24-48 hours': 0, '>48 hours': 0 };
-            const sportTiming = {};
-            const wagerTiming = {};
-            const highStakes = [];
-            const regularStakes = [];
-
-            validRecords.forEach(record => {
-                const postedTime = new Date(record.PostedDateTime);
-                const gameTime = new Date(record.GameDateTime);
-                const diffHours = (gameTime - postedTime) / (1000 * 60 * 60);
-
-                if (diffHours < 1) timeBins['<1 hour']++;
-                else if (diffHours >= 1 && diffHours < 6) timeBins['1-6 hours']++;
-                else if (diffHours >= 6 && diffHours < 24) timeBins['6-24 hours']++;
-                else if (diffHours >= 24 && diffHours < 48) timeBins['24-48 hours']++;
-                else if (diffHours >= 48) timeBins['>48 hours']++;
-
-                totalHoursBeforeGame += diffHours;
-
-                const sport = record.SportType || 'Unknown';
-                if (!sportTiming[sport]) sportTiming[sport] = { totalHours: 0, count: 0 };
-                sportTiming[sport].totalHours += diffHours;
-                sportTiming[sport].count++;
-
-                const wagerType = record.WagerType || 'Unknown';
-                if (!wagerTiming[wagerType]) wagerTiming[wagerType] = { totalHours: 0, count: 0 };
-                wagerTiming[wagerType].totalHours += diffHours;
-                wagerTiming[wagerType].count++;
-
-                if (record.FinalAmountWagered > 1000) highStakes.push(diffHours);
-                else regularStakes.push(diffHours);
-            });
-
-            const avgHours = totalHoursBeforeGame / validRecords.length;
-            const avgHighStakeHours = highStakes.length > 0 ? highStakes.reduce((a, b) => a + b, 0) / highStakes.length : 'N/A';
-            const avgRegularHours = regularStakes.length > 0 ? regularStakes.reduce((a, b) => a + b, 0) / regularStakes.length : 'N/A';
-            const totalWithin6Hours = timeBins['<1 hour'] + timeBins['1-6 hours'];
-            const fact = `${((totalWithin6Hours / validRecords.length) * 100).toFixed(1)}% of bets are placed within 6 hours of game start`;
-
-            const sportTimingTable = Object.entries(sportTiming).map(([sport, info]) => ({ 'Sport Type': sport, 'Avg Hours': (info.totalHours / info.count).toFixed(2) }));
-            const wagerTimingTable = Object.entries(wagerTiming).map(([wager, info]) => ({ 'Wager Type': wager, 'Avg Hours': (info.totalHours / info.count).toFixed(2) }));
-
-            return {
-                'avg_hours_before_game': avgHours.toFixed(2),
-                'time_bins': timeBins,
-                'sport_timing': sportTimingTable,
-                'wager_timing': wagerTimingTable,
-                'avg_high_stake_hours': avgHighStakeHours !== 'N/A' ? avgHighStakeHours.toFixed(2) : 'N/A',
-                'avg_regular_hours': avgRegularHours !== 'N/A' ? avgRegularHours.toFixed(2) : 'N/A',
-                'interesting_fact': fact,
-                'total_valid_bets': validRecords.length
-            };
-        }
-
         function createTable(data, columnNames = null) {
             const table = document.createElement('table');
             table.id = 'data-table';
             const thead = document.createElement('thead');
             const tbody = document.createElement('tbody');
+
             if (!Array.isArray(data) || data.length === 0) {
                 const tr = document.createElement('tr');
                 const td = document.createElement('td');
@@ -424,8 +207,8 @@
                 table.appendChild(tbody);
                 return table;
             }
-            let headers = columnNames || Object.keys(data[0]);
-            let rows = data.map(obj => headers.map(header => obj[header] !== undefined ? obj[header] : ''));
+
+            const headers = columnNames || Object.keys(data[0]);
             const headerRow = document.createElement('tr');
             headers.forEach(header => {
                 const th = document.createElement('th');
@@ -434,10 +217,12 @@
             });
             thead.appendChild(headerRow);
             table.appendChild(thead);
-            rows.forEach(rowData => {
+
+            data.forEach(rowData => {
                 const row = document.createElement('tr');
-                rowData.forEach(cellData => {
+                headers.forEach(header => {
                     const td = document.createElement('td');
+                    const cellData = rowData[header] !== undefined ? rowData[header] : '';
                     td.textContent = typeof cellData === 'object' ? JSON.stringify(cellData) : cellData;
                     row.appendChild(td);
                 });
@@ -447,23 +232,94 @@
             return table;
         }
 
-        function createBarChart(data, labels, values, yAxisLabel, chartTitle) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'bar-chart';
-            const chartDiv = document.createElement('div');
-            chartDiv.style.width = '100%';
-            chartDiv.style.height = '180px';
-            chartDiv.appendChild(canvas);
+        function createKeyValueTable(data) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const tbody = document.createElement('tbody');
 
-            myChart = new Chart(canvas, {
+            for (const [key, value] of Object.entries(data)) {
+                const row = document.createElement('tr');
+                const keyCell = document.createElement('td');
+                keyCell.textContent = key;
+                const valueCell = document.createElement('td');
+                valueCell.textContent = typeof value === 'object' ? JSON.stringify(value) : value;
+                row.appendChild(keyCell);
+                row.appendChild(valueCell);
+                tbody.appendChild(row);
+            }
+            table.appendChild(tbody);
+            return table;
+        }
+
+        function createBarChart(data, labels, values, label, title) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'data-chart';
+            canvas.style.display = 'none';
+            new Chart(canvas, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: yAxisLabel,
+                        label: label,
                         data: values,
-                        backgroundColor: '#3B82F6',
-                        borderColor: '#1E3A8A',
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: label
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Category'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title
+                        },
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            return canvas;
+        }
+
+        function createPieChart(labels, values, label, title) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'data-chart';
+            canvas.style.display = 'none';
+            const colors = [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(249, 115, 22, 0.8)',
+                'rgba(168, 85, 247, 0.8)',
+                'rgba(20, 184, 166, 0.8)'
+            ];
+            new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: colors.slice(0, labels.length).map(color => color.replace('0.8', '1')),
                         borderWidth: 1
                     }]
                 },
@@ -471,172 +327,91 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
+                        title: {
+                            display: true,
+                            text: title
+                        },
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 10
+                                }
+                            }
                         }
                     }
                 }
             });
-            return chartDiv;
-        }
-
-        function createPieChart(data, labels, values, chartTitle) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'pie-chart';
-            const chartDiv = document.createElement('div');
-            chartDiv.style.width = '100%';
-            chartDiv.style.height = '180px';
-            chartDiv.appendChild(canvas);
-
-            const backgroundColors = [
-                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#A855F7', '#F43F5E', '#14B8A6'
-            ];
-
-            myChart = new Chart(canvas, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: backgroundColors.slice(0, labels.length)
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right' },
-                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
-                    }
-                }
-            });
-            return chartDiv;
-        }
-
-        function createKeyValueTable(data) {
-            const table = document.createElement('table');
-            table.id = 'data-table';
-            const tbody = document.createElement('tbody');
-
-            for (const [key, value] of Object.entries(data)) {
-                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    valueCell.textContent = JSON.stringify(value);
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                } else if (Array.isArray(value)) {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    if (value.length > 0 && typeof value[0] === 'object') {
-                        const subTable = createTable(value);
-                        valueCell.appendChild(subTable);
-                    } else {
-                        valueCell.textContent = JSON.stringify(value);
-                    }
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                } else {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    valueCell.textContent = value;
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                }
-            }
-            table.appendChild(tbody);
-            return table;
+            return canvas;
         }
 
         function toggleView() {
-            const chartDiv = document.querySelector('#betting-analysis-result canvas');
             const table = document.getElementById('data-table');
-            const toggleButton = document.querySelector('#toggle-view button');
-
-            if (chartDiv && table) {
-                if (currentView === 'table') {
-                    table.style.display = 'none';
-                    chartDiv.style.display = 'block';
-                    toggleButton.textContent = 'Show Table';
-                    currentView = 'chart';
-                } else {
-                    table.style.display = 'block';
-                    chartDiv.style.display = 'none';
-                    toggleButton.textContent = 'Show Chart';
-                    currentView = 'table';
-                }
+            const chart = document.getElementById('data-chart');
+            if (currentView === 'table') {
+                if (table) table.style.display = 'none';
+                if (chart) chart.style.display = 'block';
+                document.querySelector('#toggle-view button').textContent = 'Show Table';
+                currentView = 'chart';
+            } else {
+                if (table) table.style.display = 'block';
+                if (chart) chart.style.display = 'none';
+                document.querySelector('#toggle-view button').textContent = 'Show Chart';
+                currentView = 'table';
             }
         }
 
         function performAnalysis() {
+            const resultDiv = document.getElementById('betting-analysis-result');
+            const analysisType = document.getElementById('analysis-type').value;
+            const toggleDiv = document.getElementById('toggle-view');
+
+            resultDiv.innerHTML = '';
+            toggleDiv.style.display = 'none';
+            if (myChart) {
+                myChart.destroy();
+                myChart = null;
+            }
+
             if (!records || records.length === 0) {
-                document.getElementById('betting-analysis-result').innerHTML = `<div class="error">No data received.</div>`;
+                resultDiv.innerHTML = '<div class="loading">No betting records available.</div>';
                 return;
             }
 
-            const resultDiv = document.getElementById('betting-analysis-result');
-            const toggleDiv = document.getElementById('toggle-view');
-            const analysisType = document.getElementById('analysis-type').value;
-            resultDiv.innerHTML = '';
-            toggleDiv.style.display = 'none';
-            currentView = 'table';
-
-            let data, table, chart = null;
-            let title = '';
-
+            let chart = null;
             try {
                 if (analysisType === 'metrics') {
-                    data = calculateMetrics(records);
-                    table = createKeyValueTable(data);
+                    const table = createKeyValueTable(records.metrics);
                     resultDiv.appendChild(table);
-                    title = 'Metrics';
                 } else if (analysisType === 'sport_breakdown') {
-                    data = calculateBreakdown(records, 'SportType', 'Sport');
-                    table = createTable(data);
+                    const table = createTable(records.sport_breakdown);
                     resultDiv.appendChild(table);
-                    const labels = data.map(item => item.Sport);
-                    const values = data.map(item => parseFloat(item['Bet Count']));
-                    chart = createPieChart(data, labels, values, 'Sport Breakdown (Bet Count)');
+                    const labels = records.sport_breakdown.map(item => item.Sport);
+                    const values = records.sport_breakdown.map(item => parseFloat(item['Bet Ratio (%)']));
+                    chart = createPieChart(labels, values, 'Bet Ratio (%)', 'Sport Breakdown');
                 } else if (analysisType === 'wager_type_breakdown') {
-                    data = calculateBreakdown(records, 'WagerType', 'Wager Type');
-                    table = createTable(data);
+                    const table = createTable(records.wager_type_breakdown);
                     resultDiv.appendChild(table);
-                    const labels = data.map(item => item['Wager Type']);
-                    const values = data.map(item => parseFloat(item['Bet Count']));
-                    chart = createPieChart(data, labels, values, 'Wager Type Breakdown (Bet Count)');
+                    const labels = records.wager_type_breakdown.map(item => item['Wager Type']);
+                    const values = records.wager_type_breakdown.map(item => parseFloat(item['Bet Ratio (%)']));
+                    chart = createPieChart(labels, values, 'Bet Ratio (%)', 'Wager Type Breakdown');
                 } else if (analysisType === 'odds_breakdown') {
-                    data = calculateOddsBreakdown(records);
-                    table = createTable(data);
+                    const table = createTable(records.odds_breakdown);
                     resultDiv.appendChild(table);
-                    const labels = data.map(item => item['Odds Range']);
-                    const values = data.map(item => parseFloat(item['Bet Count']));
-                    chart = createPieChart(data, labels, values, 'Odds Breakdown (Bet Count)');
+                    const labels = records.odds_breakdown.map(item => item.Category);
+                    const values = records.odds_breakdown.map(item => parseFloat(item['Bet Count']));
+                    chart = createBarChart(data, labels, values, 'Bet Count', 'Odds Breakdown');
                 } else if (analysisType === 'popular_selections') {
-                    data = calculatePopularSelections(records);
-                    table = createTable(data);
+                    const table = createTable(records.popular_selections);
                     resultDiv.appendChild(table);
-                    const labels = data.map(item => item.Selection);
-                    const values = data.map(item => parseFloat(item['Ticket Count']));
+                    const labels = records.popular_selections.map(item => item.Selection);
+                    const values = records.popular_selections.map(item => parseFloat(item['Ticket Count']));
                     chart = createBarChart(data, labels, values, 'Ticket Count', 'Popular Selections');
                 } else if (analysisType === 'game_timing') {
-                    data = calculateGameTiming(records);
-                    table = createKeyValueTable(data);
+                    const table = createKeyValueTable(records.game_timing);
                     resultDiv.appendChild(table);
-                    const labels = Object.keys(data['time_bins']);
-                    const values = Object.values(data['time_bins']);
+                    const labels = Object.keys(records.game_timing.time_bins);
+                    const values = Object.values(records.game_timing.time_bins);
                     chart = createBarChart(data, labels, values, 'Bet Count', 'Hourly Betting Activity');
                 }
 
@@ -653,7 +428,6 @@
                 resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
             }
         }
-
         performAnalysis();
     </script>
 </body>
