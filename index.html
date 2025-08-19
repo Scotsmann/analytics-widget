@@ -176,7 +176,10 @@
                 // Add your client's domains here. Example:
                 // "https://your-client-website.com",
                 "https://scotsmann.github.io", // Your own domain for testing
-                "http://localhost:8501" // <--- ADDED THIS FOR LOCAL STREAMLIT TESTING
+                "https://dashboard.kompili.com/Widgets",
+                "https://dashboard.kompili.com",
+                "http://localhost:8501", // <--- ADDED THIS FOR LOCAL STREAMLIT TESTING
+                 "http://localhost:8502"
             ];
             if (!allowedOrigins.includes(event.origin)) {
                 debugDiv.textContent = `Security alert: Message blocked from untrusted origin: ${event.origin}`;
@@ -658,3 +661,4 @@
     </script>
 </body>
 </html>
+
