@@ -219,18 +219,17 @@
             
                 totalStakes += wagered;
             
-                // ✅ Add stake back only if bet was a win
+                // ✅ Only add stake + won if it’s a win
                 if (won > 0) {
                     totalReturn += (won + wagered);
-                } else {
-                    totalReturn += won; // usually 0
                 }
             
-                const profit = (won > 0 ? won : 0) + (won > 0 ? wagered : 0) - wagered;
+                // Profit = (stake + won if win, else 0) - stake
+                const profit = (won > 0 ? (won + wagered) : 0) - wagered;
                 totalProfitLoss += profit;
             
                 if (won > 0) totalWins++;
-                if (won === 0) totalLosses++; // treat no return as loss
+                if (won === 0) totalLosses++;
             
                 const odds = parseFloat(record.FinalDecimal) || 0;
                 if (odds > 0) {
@@ -246,6 +245,7 @@
             
                 totalPicks += parseFloat(record.TotalPicks) || 0;
             });
+
 
 
             const roi = totalStakes > 0 ? ((totalProfitLoss / totalStakes) * 100).toFixed(2) : 0;
@@ -671,5 +671,6 @@
     </script>
 </body>
 </html>
+
 
 
