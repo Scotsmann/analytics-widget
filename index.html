@@ -200,27 +200,37 @@
             data.forEach(record => {
                 const wagered = parseFloat(record.FinalAmountWagered) || 0;
                 const won = parseFloat(record.FinalAmountWon) || 0;
+            
                 totalStakes += wagered;
-                totalReturn += won;
-                const profit = won - wagered;
+            
+                // ✅ Add stake back only if bet was a win
+                if (won > 0) {
+                    totalReturn += (won + wagered);
+                } else {
+                    totalReturn += won; // usually 0
+                }
+            
+                const profit = (won > 0 ? won : 0) + (won > 0 ? wagered : 0) - wagered;
                 totalProfitLoss += profit;
-                if (won > wagered) totalWins++;
-                if (won < wagered && won === 0) totalLosses++; // Assuming a loss is a return of 0
-
+            
+                if (won > 0) totalWins++;
+                if (won === 0) totalLosses++; // treat no return as loss
+            
                 const odds = parseFloat(record.FinalDecimal) || 0;
                 if (odds > 0) {
                     totalOdds += odds;
                     minOdds = Math.min(minOdds, odds);
                     maxOdds = Math.max(maxOdds, odds);
                 }
-
+            
                 if (wagered > 0) {
                     minStake = Math.min(minStake, wagered);
                     maxStake = Math.max(maxStake, wagered);
                 }
-                
+            
                 totalPicks += parseFloat(record.TotalPicks) || 0;
             });
+
             
             const roi = totalStakes > 0 ? ((totalProfitLoss / totalStakes) * 100).toFixed(2) : 0;
             const avgPicks = totalBets > 0 ? (totalPicks / totalBets).toFixed(2) : 0;
@@ -645,3 +655,4 @@
     </script>
 </body>
 </html>
+
