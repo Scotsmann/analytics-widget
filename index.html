@@ -3,674 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Betting Analysis Widget</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <title>Betting Analytics Dashboard</title>
+    <!-- Use Tailwind CSS from a CDN for easy styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .analytics-widget {
-            border: 2px solid #1E3A8A;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 10px;
-            background-color: #F3F4F6;
-            width: 100%;
-            height: 320px;
-            overflow-y: auto;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            position: relative;
-            display: block;
-            box-sizing: border-box;
+        /* Apply a default font and background color */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
         }
-
-            .analytics-widget h3 {
-                font-size: 14px;
-                margin: 0 0 8px 0;
-                color: #FFFFFF;
-                text-align: center;
-                font-weight: 600;
-                background-color: #1E3A8A;
-                padding: 6px 0;
-                border-radius: 4px;
+        /* Style for the loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #1a73e8;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
             }
-
-            .analytics-widget select {
-                font-size: 12px;
-                padding: 4px;
-                width: 100%;
-                margin-bottom: 8px;
-                box-sizing: border-box;
-                border: 1px solid #D1D5DB;
-                border-radius: 4px;
+            100% {
+                transform: rotate(360deg);
             }
-
-            .analytics-widget table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 11px;
-                margin: 0 0 8px 0;
-                background-color: #FFFFFF;
-            }
-
-            .analytics-widget th, .analytics-widget td {
-                padding: 4px;
-                border: 1px solid #E5E7EB;
-                text-align: left;
-                white-space: nowrap;
-                max-width: 120px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .analytics-widget th {
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                font-weight: 600;
-            }
-
-            .analytics-widget .subheader {
-                font-size: 12px;
-                font-weight: 600;
-                margin: 8px 0 4px 0;
-                color: #1E3A8A;
-                background-color: #EBF4FF;
-                padding: 4px 8px;
-                border-radius: 4px;
-            }
-
-            .analytics-widget .error {
-                color: #DC2626;
-                font-size: 12px;
-                background-color: #FEF2F2;
-                padding: 8px;
-                border-radius: 4px;
-                border: 1px solid #FECACA;
-            }
-
-            .analytics-widget .loading {
-                font-size: 12px;
-                color: #6B7280;
-                text-align: center;
-                padding: 20px;
-            }
-
-            .analytics-widget .raw-data {
-                font-size: 10px;
-                color: #374151;
-                white-space: pre-wrap;
-                background-color: #F9FAFB;
-                padding: 4px;
-                border-radius: 4px;
-                margin-top: 8px;
-                max-height: 100px;
-                overflow-y: auto;
-            }
-
-            .analytics-widget .debug-info {
-                font-size: 10px;
-                color: #6B7280;
-                background-color: #F9FAFB;
-                padding: 4px;
-                border-radius: 4px;
-                margin-bottom: 8px;
-            }
-
-            .analytics-widget canvas {
-                max-height: 180px;
-                width: 100%;
-                margin-bottom: 8px;
-            }
-
-            .analytics-widget button {
-                font-size: 12px;
-                padding: 4px 8px;
-                margin-bottom: 8px;
-                background-color: #3B82F6;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-            }
-
-                .analytics-widget button:hover {
-                    background-color: #1E3A8A;
-                }
+        }
     </style>
 </head>
-<body>
-    <div class="analytics-widget">
-        <h3>Client Custom Widget</h3>
-        <select id="analysis-type" onchange="performAnalysis()">
-            <option value="metrics">Metrics</option>
-            <option value="sport_breakdown">Sport Breakdown</option>
-            <option value="wager_type_breakdown">Wager Type Breakdown</option>
-            <option value="odds_breakdown">Odds Breakdown</option>
-            <option value="popular_selections">Popular Selections</option>
-            <option value="game_timing">Game Timing</option>
-        </select>
-        <div id="toggle-view" style="display: none;">
-            <button onclick="toggleView()">Show Chart</button>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-4xl mx-auto space-y-6 m-4">
+
+        <!-- Header Section -->
+        <div class="text-center">
+            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight">Betting Analytics Dashboard</h1>
+            <p class="mt-2 text-lg text-gray-500">
+                Data fetched from the API endpoint: <code class="bg-gray-100 p-1 rounded-md text-sm">https://kompili-ip-analytics-a52176efd7f2.herokuapp.com/analytics</code>
+            </p>
         </div>
-        <div id="betting-analysis-result"></div>
-        <div id="debug-info" class="debug-info"></div>
+
+        <!-- Loading and Error Messages -->
+        <div id="loading-spinner" class="flex flex-col items-center justify-center space-y-4">
+            <div class="spinner"></div>
+            <p class="text-gray-600 font-medium">Loading analytics data...</p>
+        </div>
+
+        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="error-text">Something went wrong. Please try again later.</span>
+        </div>
+
+        <!-- Data Display Section -->
+        <div id="data-container" class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Data will be rendered here by JavaScript -->
+        </div>
     </div>
 
+    <!-- JavaScript to Fetch and Render the Data -->
     <script>
-        let records = null;
-        let myChart = null;
-        let currentView = 'table';
-        const analysisOptions = {
-            'metrics': { table: true, chart: false },
-            'sport_breakdown': { table: true, chart: true },
-            'wager_type_breakdown': { table: true, chart: true },
-            'odds_breakdown': { table: true, chart: true },
-            'popular_selections': { table: true, chart: true },
-            'game_timing': { table: true, chart: true }
-        };
+        // Use an immediately invoked function to avoid global variables
+        (async function() {
+            // Define the API endpoint
+            const apiEndpoint = 'https://kompili-ip-analytics-a52176efd7f2.herokuapp.com/analytics';
 
-        window.addEventListener('message', function (event) {
-            const debugDiv = document.getElementById('debug-info');
-            console.log('Message received from:', event.origin, 'Data:', event.data);
-            debugDiv.textContent = `Received from ${event.origin} at ${new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/London' })}`;
+            // Get references to DOM elements
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const dataContainer = document.getElementById('data-container');
+            const errorMessage = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
 
-            // IMPORTANT: Security check - ensure message is from a trusted origin
-            const allowedOrigins = [
-                // Add your client's domains here. Example:
-                // "https://your-client-website.com",
-                "https://scotsmann.github.io", // Your own domain for testing
-                "https://dashboard.kompili.com/Widgets",
-                "https://dashboard.kompili.com",
-                "http://localhost:8501", // <--- ADDED THIS FOR LOCAL STREAMLIT TESTING
-                 "http://localhost:8502"
-            ];
-            if (!allowedOrigins.includes(event.origin)) {
-                debugDiv.textContent = `Security alert: Message blocked from untrusted origin: ${event.origin}`;
-                return; // Exit if the origin is not allowed
+            // Function to show an error message
+            function showError(message) {
+                loadingSpinner.classList.add('hidden');
+                errorMessage.classList.remove('hidden');
+                errorText.textContent = message;
             }
 
-            if (event.data && event.data.type === 'bettingData') {
-                records = event.data.records;
-                debugDiv.textContent += ` | Records: ${records.length}`;
-                console.log('Records processed:', records);
-                performAnalysis();
-            } else {
-                debugDiv.textContent += ' | Invalid or no data';
+            // Function to format numbers for display
+            function formatNumber(value) {
+                if (typeof value === 'number') {
+                    // Check if the number is an integer
+                    if (Number.isInteger(value)) {
+                        return value;
+                    }
+                    return value.toFixed(2);
+                }
+                return value;
             }
-        });
 
-        function calculateMetrics(data) {
-            let totalStakes = 0;
-            let totalReturn = 0;
-            let totalProfitLoss = 0;
-            let totalBets = 0;
-            let totalWins = 0;
-            let totalLosses = 0;
-            let totalOdds = 0;
-            let minStake = Infinity;
-            let maxStake = 0;
-            let minOdds = Infinity;
-            let maxOdds = 0;
-            let totalPicks = 0;
-
-            const uniqueTickets = [...new Set(data.map(r => r.TicketNumber))];
-            totalBets = uniqueTickets.length;
-
-            data.forEach(record => {
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-            
-                totalStakes += wagered;
-            
-                // ✅ Only add stake + won if it’s a win
-                if (won > 0) {
-                    totalReturn += (won + wagered);
-                }
-            
-                // Profit = (stake + won if win, else 0) - stake
-                const profit = (won > 0 ? (won + wagered) : 0) - wagered;
-                totalProfitLoss += profit;
-            
-                if (won > 0) totalWins++;
-                if (won === 0) totalLosses++;
-            
-                const odds = parseFloat(record.FinalDecimal) || 0;
-                if (odds > 0) {
-                    totalOdds += odds;
-                    minOdds = Math.min(minOdds, odds);
-                    maxOdds = Math.max(maxOdds, odds);
-                }
-            
-                if (wagered > 0) {
-                    minStake = Math.min(minStake, wagered);
-                    maxStake = Math.max(maxStake, wagered);
-                }
-            
-                totalPicks += parseFloat(record.TotalPicks) || 0;
-            });
-
-
-
-            const roi = totalStakes > 0 ? ((totalProfitLoss / totalStakes) * 100).toFixed(2) : 0;
-            const avgPicks = totalBets > 0 ? (totalPicks / totalBets).toFixed(2) : 0;
-            const avgOdds = data.length > 0 ? (totalOdds / data.length).toFixed(2) : 0;
-
-            return {
-                'Unique Tickets': totalBets,
-                'Total Wagered': totalStakes.toFixed(2),
-                'Total Return': totalReturn.toFixed(2),
-                'Profit/Loss': totalProfitLoss.toFixed(2),
-                'ROI': roi + '%',
-                'Avg Stake': (totalStakes / totalBets).toFixed(2),
-                'Min Stake': minStake !== Infinity ? minStake.toFixed(2) : 'N/A',
-                'Max Stake': maxStake.toFixed(2),
-                'Avg Picks': avgPicks,
-                'Avg Odds': avgOdds,
-                'Min Odds': minOdds !== Infinity ? minOdds.toFixed(2) : 'N/A',
-                'Max Odds': maxOdds.toFixed(2),
-                'Pending Bets': data.filter(r => r.FinalAmountWon === null).length
-            };
-        }
-
-        function calculateBreakdown(data, groupBy, type) {
-            const breakdown = {};
-            const totalBets = [...new Set(records.map(r => r.TicketNumber))].length;
-            const validRecords = data.filter(record => record[groupBy]);
-
-            validRecords.forEach(record => {
-                const group = record[groupBy];
-                if (!breakdown[group]) {
-                    breakdown[group] = { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0, 'ROI': 0 };
-                }
-                breakdown[group]['Bet Count'] += 1;
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-                breakdown[group]['Total Stakes'] += wagered;
-                breakdown[group]['Profit/Loss'] += (won - wagered);
-            });
-
-            return Object.entries(breakdown).map(([group, info]) => {
-                const betRatio = (info['Bet Count'] / totalBets) * 100;
-                const avgStake = info['Bet Count'] > 0 ? (info['Total Stakes'] / info['Bet Count']) : 0;
-                const roi = info['Total Stakes'] > 0 ? ((info['Profit/Loss'] / info['Total Stakes']) * 100) : 0;
-
-                let result = {
-                    [type]: group,
-                    'Bet Count': info['Bet Count'],
-                    'Bet Ratio (%)': betRatio.toFixed(2),
-                    'Total Stakes': info['Total Stakes'].toFixed(2),
-                    'Avg Stake': avgStake.toFixed(2),
-                    'Profit/Loss': info['Profit/Loss'].toFixed(2),
-                    'ROI (%)': roi.toFixed(2)
-                };
-
-                // Remove Avg Stake for Wager Type to match the example
-                if (type === 'Wager Type') {
-                    delete result['Avg Stake'];
+            // Function to render the fetched data
+            function renderData(data) {
+                // Clear any existing content
+                dataContainer.innerHTML = '';
+                // Check if the data is a valid object
+                if (typeof data !== 'object' || data === null) {
+                    showError('Invalid data format received from the API.');
+                    return;
                 }
 
-                return result;
-            });
-        }
+                // Iterate over the keys in the data object and create cards for each
+                for (const key in data) {
+                    if (Object.hasOwnProperty.call(data, key)) {
+                        // Create a new div for each data point
+                        const dataCard = document.createElement('div');
+                        dataCard.className = 'bg-white p-6 rounded-xl shadow-sm border border-gray-200';
 
-        function calculateOddsBreakdown(data) {
-            const oddsBreakdown = {
-                '< 2.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
-                '2.0 - 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
-                '> 5.0': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 },
-                'N/A': { 'Bet Count': 0, 'Total Stakes': 0, 'Profit/Loss': 0 }
-            };
-            const totalBets = [...new Set(records.map(r => r.TicketNumber))].length;
+                        // Create the title of the card from the key
+                        const cardTitle = document.createElement('h3');
+                        cardTitle.className = 'text-xl font-semibold text-gray-700 capitalize break-words';
+                        // Replace underscores with spaces and capitalize the first letter of each word
+                        cardTitle.textContent = key.replace(/_/g, ' ');
 
-            data.forEach(record => {
-                const odds = parseFloat(record.FinalDecimal);
-                let category = 'N/A';
-                if (odds) {
-                    if (odds < 2.0) category = '< 2.0';
-                    else if (odds >= 2.0 && odds <= 5.0) category = '2.0 - 5.0';
-                    else if (odds > 5.0) category = '> 5.0';
-                }
+                        // Create a paragraph for the value
+                        const cardValue = document.createElement('p');
+                        cardValue.className = 'mt-2 text-3xl font-bold text-blue-600';
+                        cardValue.textContent = formatNumber(data[key]);
 
-                oddsBreakdown[category]['Bet Count']++;
-                const wagered = parseFloat(record.FinalAmountWagered) || 0;
-                const won = parseFloat(record.FinalAmountWon) || 0;
-                oddsBreakdown[category]['Total Stakes'] += wagered;
-                oddsBreakdown[category]['Profit/Loss'] += (won - wagered);
-            });
-
-            return Object.entries(oddsBreakdown).map(([oddsRange, info]) => {
-                const betRatio = (info['Bet Count'] / totalBets) * 100;
-                const roi = info['Total Stakes'] > 0 ? ((info['Profit/Loss'] / info['Total Stakes']) * 100) : 0;
-                return {
-                    'Odds Range': oddsRange,
-                    'Bet Count': info['Bet Count'],
-                    'Bet Ratio (%)': betRatio.toFixed(2),
-                    'Total Stakes': info['Total Stakes'].toFixed(2),
-                    'Profit/Loss': info['Profit/Loss'].toFixed(2),
-                    'ROI (%)': roi.toFixed(2)
-                };
-            });
-        }
-
-        function calculatePopularSelections(data) {
-            const selections = {};
-            data.forEach(record => {
-                const selection = record.ChosenTeamID || 'Unknown';
-                const sport = record.SportType || 'Unknown';
-                if (!selections[selection]) {
-                    selections[selection] = { 'Ticket Count': 0, 'Sport Type': sport };
-                }
-                selections[selection]['Ticket Count'] += 1;
-            });
-            return Object.entries(selections).map(([selection, info]) => ({
-                'Selection': selection,
-                'Ticket Count': info['Ticket Count'],
-                'Sport Type': info['Sport Type']
-            })).sort((a, b) => b['Ticket Count'] - a['Ticket Count']);
-        }
-
-        function calculateGameTiming(data) {
-            const validRecords = data.filter(r => r.PostedDateTime && r.GameDateTime);
-            let totalHoursBeforeGame = 0;
-            const timeBins = { '<1 hour': 0, '1-6 hours': 0, '6-24 hours': 0, '24-48 hours': 0, '>48 hours': 0 };
-            const sportTiming = {};
-            const wagerTiming = {};
-            const highStakes = [];
-            const regularStakes = [];
-
-            validRecords.forEach(record => {
-                const postedTime = new Date(record.PostedDateTime);
-                const gameTime = new Date(record.GameDateTime);
-                const diffHours = (gameTime - postedTime) / (1000 * 60 * 60);
-
-                if (diffHours < 1) timeBins['<1 hour']++;
-                else if (diffHours >= 1 && diffHours < 6) timeBins['1-6 hours']++;
-                else if (diffHours >= 6 && diffHours < 24) timeBins['6-24 hours']++;
-                else if (diffHours >= 24 && diffHours < 48) timeBins['24-48 hours']++;
-                else if (diffHours >= 48) timeBins['>48 hours']++;
-
-                totalHoursBeforeGame += diffHours;
-
-                const sport = record.SportType || 'Unknown';
-                if (!sportTiming[sport]) sportTiming[sport] = { totalHours: 0, count: 0 };
-                sportTiming[sport].totalHours += diffHours;
-                sportTiming[sport].count++;
-
-                const wagerType = record.WagerType || 'Unknown';
-                if (!wagerTiming[wagerType]) wagerTiming[wagerType] = { totalHours: 0, count: 0 };
-                wagerTiming[wagerType].totalHours += diffHours;
-                wagerTiming[wagerType].count++;
-
-                if (record.FinalAmountWagered > 1000) highStakes.push(diffHours);
-                else regularStakes.push(diffHours);
-            });
-
-            const avgHours = totalHoursBeforeGame / validRecords.length;
-            const avgHighStakeHours = highStakes.length > 0 ? highStakes.reduce((a, b) => a + b, 0) / highStakes.length : 'N/A';
-            const avgRegularHours = regularStakes.length > 0 ? regularStakes.reduce((a, b) => a + b, 0) / regularStakes.length : 'N/A';
-            const totalWithin6Hours = timeBins['<1 hour'] + timeBins['1-6 hours'];
-            const fact = `${((totalWithin6Hours / validRecords.length) * 100).toFixed(1)}% of bets are placed within 6 hours of game start`;
-
-            const sportTimingTable = Object.entries(sportTiming).map(([sport, info]) => ({ 'Sport Type': sport, 'Avg Hours': (info.totalHours / info.count).toFixed(2) }));
-            const wagerTimingTable = Object.entries(wagerTiming).map(([wager, info]) => ({ 'Wager Type': wager, 'Avg Hours': (info.totalHours / info.count).toFixed(2) }));
-
-            return {
-                'avg_hours_before_game': avgHours.toFixed(2),
-                'time_bins': timeBins,
-                'sport_timing': sportTimingTable,
-                'wager_timing': wagerTimingTable,
-                'avg_high_stake_hours': avgHighStakeHours !== 'N/A' ? avgHighStakeHours.toFixed(2) : 'N/A',
-                'avg_regular_hours': avgRegularHours !== 'N/A' ? avgRegularHours.toFixed(2) : 'N/A',
-                'interesting_fact': fact,
-                'total_valid_bets': validRecords.length
-            };
-        }
-
-        function createTable(data, columnNames = null) {
-            const table = document.createElement('table');
-            table.id = 'data-table';
-            const thead = document.createElement('thead');
-            const tbody = document.createElement('tbody');
-            if (!Array.isArray(data) || data.length === 0) {
-                const tr = document.createElement('tr');
-                const td = document.createElement('td');
-                td.textContent = 'No data available';
-                tr.appendChild(td);
-                tbody.appendChild(tr);
-                table.appendChild(tbody);
-                return table;
-            }
-            let headers = columnNames || Object.keys(data[0]);
-            let rows = data.map(obj => headers.map(header => obj[header] !== undefined ? obj[header] : ''));
-            const headerRow = document.createElement('tr');
-            headers.forEach(header => {
-                const th = document.createElement('th');
-                th.textContent = header;
-                headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-            rows.forEach(rowData => {
-                const row = document.createElement('tr');
-                rowData.forEach(cellData => {
-                    const td = document.createElement('td');
-                    td.textContent = typeof cellData === 'object' ? JSON.stringify(cellData) : cellData;
-                    row.appendChild(td);
-                });
-                tbody.appendChild(row);
-            });
-            table.appendChild(tbody);
-            return table;
-        }
-
-        function createBarChart(data, labels, values, yAxisLabel, chartTitle) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'bar-chart';
-            const chartDiv = document.createElement('div');
-            chartDiv.style.width = '100%';
-            chartDiv.style.height = '180px';
-            chartDiv.appendChild(canvas);
-
-            myChart = new Chart(canvas, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: yAxisLabel,
-                        data: values,
-                        backgroundColor: '#3B82F6',
-                        borderColor: '#1E3A8A',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
+                        // Append elements to the card and the card to the container
+                        dataCard.appendChild(cardTitle);
+                        dataCard.appendChild(cardValue);
+                        dataContainer.appendChild(dataCard);
                     }
                 }
-            });
-            return chartDiv;
-        }
-
-        function createPieChart(data, labels, values, chartTitle) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'pie-chart';
-            const chartDiv = document.createElement('div');
-            chartDiv.style.width = '100%';
-            chartDiv.style.height = '180px';
-            chartDiv.appendChild(canvas);
-
-            const backgroundColors = [
-                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#A855F7', '#F43F5E', '#14B8A6'
-            ];
-
-            myChart = new Chart(canvas, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: backgroundColors.slice(0, labels.length)
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right' },
-                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
-                    }
-                }
-            });
-            return chartDiv;
-        }
-
-        function createKeyValueTable(data) {
-            const table = document.createElement('table');
-            table.id = 'data-table';
-            const tbody = document.createElement('tbody');
-
-            for (const [key, value] of Object.entries(data)) {
-                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    valueCell.textContent = JSON.stringify(value);
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                } else if (Array.isArray(value)) {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    if (value.length > 0 && typeof value[0] === 'object') {
-                        const subTable = createTable(value);
-                        valueCell.appendChild(subTable);
-                    } else {
-                        valueCell.textContent = JSON.stringify(value);
-                    }
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                } else {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    valueCell.textContent = value;
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                }
-            }
-            table.appendChild(tbody);
-            return table;
-        }
-
-        function toggleView() {
-            const chartDiv = document.querySelector('#betting-analysis-result canvas');
-            const table = document.getElementById('data-table');
-            const toggleButton = document.querySelector('#toggle-view button');
-
-            if (chartDiv && table) {
-                if (currentView === 'table') {
-                    table.style.display = 'none';
-                    chartDiv.style.display = 'block';
-                    toggleButton.textContent = 'Show Table';
-                    currentView = 'chart';
-                } else {
-                    table.style.display = 'block';
-                    chartDiv.style.display = 'none';
-                    toggleButton.textContent = 'Show Chart';
-                    currentView = 'table';
-                }
-            }
-        }
-
-        function performAnalysis() {
-            if (!records || records.length === 0) {
-                document.getElementById('betting-analysis-result').innerHTML = `<div class="error">No data received.</div>`;
-                return;
             }
 
-            const resultDiv = document.getElementById('betting-analysis-result');
-            const toggleDiv = document.getElementById('toggle-view');
-            const analysisType = document.getElementById('analysis-type').value;
-            resultDiv.innerHTML = '';
-            toggleDiv.style.display = 'none';
-            currentView = 'table';
-
-            let data, table, chart = null;
-            let title = '';
-
+            // Fetch data from the API
             try {
-                if (analysisType === 'metrics') {
-                    data = calculateMetrics(records);
-                    table = createKeyValueTable(data);
-                    resultDiv.appendChild(table);
-                    title = 'Metrics';
-                } else if (analysisType === 'sport_breakdown') {
-                    data = calculateBreakdown(records, 'SportType', 'Sport');
-                    table = createTable(data);
-                    resultDiv.appendChild(table);
-                    const labels = data.map(item => item.Sport);
-                    const values = data.map(item => parseFloat(item['Bet Count']));
-                    chart = createPieChart(data, labels, values, 'Sport Breakdown (Bet Count)');
-                } else if (analysisType === 'wager_type_breakdown') {
-                    data = calculateBreakdown(records, 'WagerType', 'Wager Type');
-                    table = createTable(data);
-                    resultDiv.appendChild(table);
-                    const labels = data.map(item => item['Wager Type']);
-                    const values = data.map(item => parseFloat(item['Bet Count']));
-                    chart = createPieChart(data, labels, values, 'Wager Type Breakdown (Bet Count)');
-                } else if (analysisType === 'odds_breakdown') {
-                    data = calculateOddsBreakdown(records);
-                    table = createTable(data);
-                    resultDiv.appendChild(table);
-                    const labels = data.map(item => item['Odds Range']);
-                    const values = data.map(item => parseFloat(item['Bet Count']));
-                    chart = createPieChart(data, labels, values, 'Odds Breakdown (Bet Count)');
-                } else if (analysisType === 'popular_selections') {
-                    data = calculatePopularSelections(records);
-                    table = createTable(data);
-                    resultDiv.appendChild(table);
-                    const labels = data.map(item => item.Selection);
-                    const values = data.map(item => parseFloat(item['Ticket Count']));
-                    chart = createBarChart(data, labels, values, 'Ticket Count', 'Popular Selections');
-                } else if (analysisType === 'game_timing') {
-                    data = calculateGameTiming(records);
-                    table = createKeyValueTable(data);
-                    resultDiv.appendChild(table);
-                    const labels = Object.keys(data['time_bins']);
-                    const values = Object.values(data['time_bins']);
-                    chart = createBarChart(data, labels, values, 'Bet Count', 'Hourly Betting Activity');
+                // Start by showing the loading spinner
+                loadingSpinner.classList.remove('hidden');
+                dataContainer.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+
+                const response = await fetch(apiEndpoint);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const subheader = document.createElement('div');
-                subheader.className = 'subheader';
-                subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
-                resultDiv.prepend(subheader);
+                const result = await response.json();
 
-                if (chart) {
-                    resultDiv.appendChild(chart);
-                    toggleDiv.style.display = 'block';
+                // Check if the response contains the 'data' key as expected
+                if (result && result.data) {
+                    renderData(result.data);
+                } else {
+                    throw new Error('API response is missing the "data" key.');
                 }
+
             } catch (error) {
-                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                console.error('Fetch error:', error);
+                showError('Failed to fetch data from the API. Please check the endpoint or your network connection.');
+            } finally {
+                // Hide the loading spinner regardless of success or failure
+                loadingSpinner.classList.add('hidden');
+                dataContainer.classList.remove('hidden');
             }
-        }
-
-        performAnalysis();
+        })();
     </script>
 </body>
 </html>
-
-
-
