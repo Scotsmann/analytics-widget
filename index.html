@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Betting Analytics Dashboard</title>
+    <title>Betting Analytics Widget</title>
     <!-- Use Tailwind CSS from a CDN for easy styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -37,16 +37,16 @@
 
         <!-- Header Section -->
         <div class="text-center">
-            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight">Betting Analytics Dashboard</h1>
+            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight">Betting Analytics Widget</h1>
             <p class="mt-2 text-lg text-gray-500">
-                Data fetched from the API endpoint: <code class="bg-gray-100 p-1 rounded-md text-sm">https://kompili-ip-analytics-a52176efd7f2.herokuapp.com/analytics</code>
+                Waiting for data from the parent page...
             </p>
         </div>
 
         <!-- Loading and Error Messages -->
         <div id="loading-spinner" class="flex flex-col items-center justify-center space-y-4">
             <div class="spinner"></div>
-            <p class="text-gray-600 font-medium">Loading analytics data...</p>
+            <p class="text-gray-600 font-medium">Processing data...</p>
         </div>
 
         <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -64,20 +64,25 @@
     <script>
         // Use an immediately invoked function to avoid global variables
         (async function() {
-            // Define the API endpoint
-            const apiEndpoint = 'https://kompili-ip-analytics-a52176efd7f2.herokuapp.com/analytics';
-
             // Get references to DOM elements
             const loadingSpinner = document.getElementById('loading-spinner');
             const dataContainer = document.getElementById('data-container');
             const errorMessage = document.getElementById('error-message');
             const errorText = document.getElementById('error-text');
+            const headerText = document.querySelector('p.text-lg');
+
+            // Initially hide the data container and show the waiting message
+            dataContainer.classList.add('hidden');
+            loadingSpinner.classList.add('hidden');
+            headerText.textContent = "Waiting for data from the parent page...";
 
             // Function to show an error message
             function showError(message) {
                 loadingSpinner.classList.add('hidden');
+                dataContainer.classList.add('hidden');
                 errorMessage.classList.remove('hidden');
                 errorText.textContent = message;
+                headerText.textContent = "An error occurred.";
             }
 
             // Function to format numbers for display
@@ -126,38 +131,37 @@
                         dataContainer.appendChild(dataCard);
                     }
                 }
-            }
-
-            // Fetch data from the API
-            try {
-                // Start by showing the loading spinner
-                loadingSpinner.classList.remove('hidden');
-                dataContainer.classList.add('hidden');
-                errorMessage.classList.add('hidden');
-
-                const response = await fetch(apiEndpoint);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-
-                // Check if the response contains the 'data' key as expected
-                if (result && result.data) {
-                    renderData(result.data);
-                } else {
-                    throw new Error('API response is missing the "data" key.');
-                }
-
-            } catch (error) {
-                console.error('Fetch error:', error);
-                showError('Failed to fetch data from the API. Please check the endpoint or your network connection.');
-            } finally {
-                // Hide the loading spinner regardless of success or failure
                 loadingSpinner.classList.add('hidden');
                 dataContainer.classList.remove('hidden');
+                headerText.textContent = 'Data loaded successfully!';
             }
+
+            // Listen for messages from the parent window
+            window.addEventListener('message', async (event) => {
+                // IMPORTANT: In a production app, you should verify the origin
+                // to prevent cross-site scripting attacks.
+                // For example: if (event.origin !== 'https://your-parent-site.com') return;
+
+                const message = event.data;
+
+                // Check if the message is the type we are expecting
+                if (message && message.type === 'bettingData' && message.data) {
+                    loadingSpinner.classList.remove('hidden');
+                    errorMessage.classList.add('hidden');
+                    dataContainer.classList.add('hidden');
+                    headerText.textContent = "Processing data...";
+                    loadingSpinner.classList.remove('hidden');
+                    try {
+                        renderData(message.data);
+                    } catch (error) {
+                        showError('Failed to render data. Please check the data format.');
+                        console.error('Rendering error:', error);
+                    }
+                } else {
+                    console.warn('Received an invalid message type or no data.');
+                    showError('Received an invalid message or no data from the parent page.');
+                }
+            });
         })();
     </script>
 </body>
