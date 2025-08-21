@@ -3,10 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Betting Analysis Widget</title>
-    <!-- Use a CDN for Chart.js -->
+    <title>Customer Widget</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .main-container {
+            max-width: 600px;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .main-container h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
         .analytics-widget {
             border: 2px solid #1E3A8A;
             border-radius: 8px;
@@ -14,9 +31,8 @@
             padding: 10px;
             background-color: #F3F4F6;
             width: 100%;
-            height: 100%;
+            height: 320px;
             overflow-y: auto;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             position: relative;
             display: block;
             box-sizing: border-box;
@@ -124,21 +140,24 @@
     </style>
 </head>
 <body>
-    <div class="analytics-widget">
-        <h3>Client Custom Widget</h3>
-        <select id="analysis-type" onchange="renderAnalysis()">
-            <option value="metrics">Metrics</option>
-            <option value="sport_breakdown">Sport Breakdown</option>
-            <option value="wager_type_breakdown">Wager Type Breakdown</option>
-            <option value="odds_breakdown">Odds Breakdown</option>
-            <option value="popular_selections">Popular Selections</option>
-            <option value="game_timing">Game Timing</option>
-        </select>
-        <div id="toggle-view" style="display: none;">
-            <button onclick="toggleView()">Show Chart</button>
+    <div class="main-container">
+        <h1>Customer</h1>
+        <div class="analytics-widget">
+            <h3>Customer Widget</h3>
+            <select id="analysis-type" onchange="renderAnalysis()">
+                <option value="metrics">Metrics</option>
+                <option value="sport_breakdown">Sport Breakdown</option>
+                <option value="wager_type_breakdown">Wager Type Breakdown</option>
+                <option value="odds_breakdown">Odds Breakdown</option>
+                <option value="popular_selections">Popular Selections</option>
+                <option value="game_timing">Game Timing</option>
+            </select>
+            <div id="toggle-view" style="display: none;">
+                <button onclick="toggleView()">Show Chart</button>
+            </div>
+            <div id="betting-analysis-result"></div>
+            <div id="debug-info" class="debug-info"></div>
         </div>
-        <div id="betting-analysis-result"></div>
-        <div id="debug-info" class="debug-info"></div>
     </div>
 
     <script>
@@ -419,4 +438,3 @@
     </script>
 </body>
 </html>
-
