@@ -3,222 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Betting Analysis</title>
-    <!-- Use Tailwind CSS from a CDN for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Include Chart.js for data visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Client Betting Analysis Widget</title>
+    <!-- Use a CDN for Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
+        .analytics-widget {
+            border: 2px solid #1E3A8A;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            background-color: #F3F4F6;
+            width: 100%;
+            height: 320px;
+            overflow-y: auto;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            position: relative;
+            display: block;
+            box-sizing: border-box;
         }
-        .container {
-            max-width: 900px;
-            margin: auto;
-            padding: 1rem;
-        }
-        .card {
-            background-color: #ffffff;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            margin-top: 1.5rem;
-            border: 1px solid #e5e7eb;
-        }
-        .header {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 1rem;
+        .analytics-widget h3 {
+            font-size: 14px;
+            margin: 0 0 8px 0;
+            color: #FFFFFF;
             text-align: center;
-        }
-        .subheader {
-            font-size: 1.25rem;
             font-weight: 600;
-            color: #4b5563;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 0.5rem;
+            background-color: #1E3A8A;
+            padding: 6px 0;
+            border-radius: 4px;
         }
-        .loading, .error {
-            text-align: center;
-            font-size: 1.125rem;
-            color: #6b7280;
-            padding: 2rem;
-            background-color: #f9fafb;
-            border-radius: 0.75rem;
-            border: 1px solid #e5e7eb;
+        .analytics-widget select {
+            font-size: 12px;
+            padding: 4px;
+            width: 100%;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            border: 1px solid #D1D5DB;
+            border-radius: 4px;
         }
-        .error {
-            color: #ef4444;
-            background-color: #fef2f2;
-            border-color: #fecaca;
-        }
-        .button-group {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        button {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-        button.primary {
-            background-color: #3b82f6;
-            color: white;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-        }
-        button.primary:hover {
-            background-color: #2563eb;
-            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
-        }
-        button.secondary {
-            background-color: #f3f4f6;
-            color: #3b82f6;
-            border: 1px solid #d1d5db;
-        }
-        button.secondary:hover {
-            background-color: #e5e7eb;
-        }
-        select {
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            border: 1px solid #d1d5db;
-            background-color: #f9fafb;
-        }
-        table {
+        .analytics-widget table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem;
+            font-size: 11px;
+            margin: 0 0 8px 0;
+            background-color: #FFFFFF;
         }
-        th, td {
+        .analytics-widget th, .analytics-widget td {
+            padding: 4px;
+            border: 1px solid #E5E7EB;
             text-align: left;
-            padding: 0.75rem;
-            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        th {
-            background-color: #f9fafb;
+        .analytics-widget th {
+            background-color: #3B82F6;
+            color: #FFFFFF;
             font-weight: 600;
         }
-        tr:hover {
-            background-color: #f3f4f6;
+        .analytics-widget .subheader {
+            font-size: 12px;
+            font-weight: 600;
+            margin: 8px 0 4px 0;
+            color: #1E3A8A;
+            background-color: #EBF4FF;
+            padding: 4px 8px;
+            border-radius: 4px;
         }
-        canvas {
-            width: 100% !important;
-            height: auto !important;
-            max-height: 500px;
+        .analytics-widget .error {
+            color: #DC2626;
+            font-size: 12px;
+            background-color: #FEF2F2;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #FECACA;
+        }
+        .analytics-widget .loading {
+            font-size: 12px;
+            color: #6B7280;
+            text-align: center;
+            padding: 20px;
+        }
+        .analytics-widget .raw-data {
+            font-size: 10px;
+            color: #374151;
+            white-space: pre-wrap;
+            background-color: #F9FAFB;
+            padding: 4px;
+            border-radius: 4px;
+            margin-top: 8px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .analytics-widget .debug-info {
+            font-size: 10px;
+            color: #6B7280;
+            background-color: #F9FAFB;
+            padding: 4px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        .analytics-widget canvas {
+            max-height: 180px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        .analytics-widget button {
+            font-size: 12px;
+            padding: 4px 8px;
+            margin-bottom: 8px;
+            background-color: #3B82F6;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .analytics-widget button:hover {
+            background-color: #1E3A8A;
         }
     </style>
 </head>
-<body class="bg-gray-100">
-
-    <div class="container">
-        <div class="card">
-            <h1 class="header">Betting Analysis Dashboard</h1>
-            
-            <!-- Dropdown for analysis type and button -->
-            <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <label for="analysis-type" class="text-sm font-medium text-gray-700">Select Analysis:</label>
-                <select id="analysis-type" class="w-full sm:w-auto">
-                    <option value="metrics">Overall Metrics</option>
-                    <option value="sport_breakdown">Sport Breakdown</option>
-                    <option value="wager_type_breakdown">Wager Type Breakdown</option>
-                    <option value="popular_selections">Popular Selections</option>
-                    <option value="game_timing">Game Timing</option>
-                </select>
-                <button onclick="fetchBettingAnalysis()" class="primary w-full sm:w-auto">Run Analysis</button>
-            </div>
-
-            <!-- Div to display results -->
-            <div id="betting-analysis-result" class="mt-8">
-                <div class="loading">Select an analysis type and click "Run Analysis" to see the results.</div>
-            </div>
-
-            <!-- Toggle button for chart/table view -->
-            <div id="toggle-view" class="mt-4 text-center" style="display: none;">
-                <button onclick="toggleView()" class="secondary">Show Chart</button>
-            </div>
+<body>
+    <div class="analytics-widget">
+        <h3>Client Custom Widget</h3>
+        <select id="analysis-type" onchange="renderAnalysis()">
+            <option value="metrics">Metrics</option>
+            <option value="sport_breakdown">Sport Breakdown</option>
+            <option value="wager_type_breakdown">Wager Type Breakdown</option>
+            <option value="odds_breakdown">Odds Breakdown</option>
+            <option value="popular_selections">Popular Selections</option>
+            <option value="game_timing">Game Timing</option>
+        </select>
+        <div id="toggle-view" style="display: none;">
+            <button onclick="toggleView()">Show Chart</button>
         </div>
+        <div id="betting-analysis-result"></div>
+        <div id="debug-info" class="debug-info"></div>
     </div>
 
     <script>
-        // Configuration
-        const apiConfig = {
-            url: 'https://kompili-ip-analytics-a52176efd7f2.herokuapp.com/betting-analysis',
-            apiKey: '' // Add your API key here if required
-        };
-
-        // Example betting records. This would be replaced with dynamic data in a real application.
-        const records = [
-            {
-                "CustomerID": "C12345",
-                "PostedDateTime": "2025-08-13 18:00:29",
-                "GameDateTime": "2025-08-13 18:10:01",
-                "TicketNumber": "388239142",
-                "WagerType": "M",
-                "TotalPicks": 1,
-                "ItemNumber": 1,
-                "SportType": "Baseball",
-                "SportSubType": "MLB",
-                "LineType": "M",
-                "ChosenTeamID": "Pittsburgh Pirates",
-                "PeriodDescription": "Game",
-                "FinalAmountWagered": 175.0,
-                "FinalAmountWon": 0.0,
-                "FinalMoney": 121,
-                "FinalDecimal": 2.21,
-                "AmountWagered": 175.0,
-                "ToWinAmount": 211.75,
-                "VolumeAmount": 175.0,
-                "Description": "Baseball - 952 Pittsburgh Pirates +121 for Game Logan Webb (R) - Action Mike Burrows (R) - Action",
-                "AgentID": "DIGI.YOU",
-                "OrigSpread": 0,
-                "OrigTotalPoints": 0,
-                "OrigMoney": 121
-            },
-            {
-                "CustomerID": "C12345",
-                "PostedDateTime": "2025-08-05 10:32:43",
-                "GameDateTime": "2025-08-05 18:40:01",
-                "TicketNumber": "386332331",
-                "WagerType": "M",
-                "TotalPicks": 1,
-                "ItemNumber": 1,
-                "SportType": "Baseball",
-                "SportSubType": "MLB",
-                "LineType": "M",
-                "ChosenTeamID": "Pittsburgh Pirates",
-                "PeriodDescription": "Game",
-                "FinalAmountWagered": 300.0,
-                "FinalAmountWon": 0.0,
-                "FinalMoney": 121,
-                "FinalDecimal": 2.21,
-                "AmountWagered": 300.0,
-                "ToWinAmount": 363.0,
-                "VolumeAmount": 300.0,
-                "Description": "Baseball - 952 Pittsburgh Pirates +121 for Game Logan Webb (R) - Action Mike Burrows (R) - Action",
-                "AgentID": "DIGI.YOU",
-                "OrigSpread": 0,
-                "OrigTotalPoints": 0,
-                "OrigMoney": 121
+        let analysisData = null;
+        let myChart = null;
+        let currentView = 'table';
+        
+        // This function will render the analysis based on the selected type
+        function renderAnalysis() {
+            const resultDiv = document.getElementById('betting-analysis-result');
+            const toggleDiv = document.getElementById('toggle-view');
+            const analysisType = document.getElementById('analysis-type').value;
+            resultDiv.innerHTML = '';
+            toggleDiv.style.display = 'none';
+            currentView = 'table';
+            
+            if (!analysisData) {
+                resultDiv.innerHTML = `<div class="error">No data has been received from the API.</div>`;
+                return;
             }
-        ];
+            
+            let data, table, chart = null;
+            
+            try {
+                if (analysisData[analysisType] === null || typeof analysisData[analysisType] === 'undefined') {
+                    resultDiv.innerHTML = `<div class="error">No data available for this analysis type from the API.</div>`;
+                    return;
+                }
 
-        // Helper function to create a table from data
+                data = analysisData[analysisType];
+                
+                if (analysisType === 'metrics' || analysisType === 'game_timing') {
+                    table = createKeyValueTable(data);
+                } else if (data && Array.isArray(data)) {
+                    table = createTable(data);
+                } else {
+                    resultDiv.innerHTML = `<div class="error">Invalid data format for this analysis type.</div>`;
+                    return;
+                }
+                
+                resultDiv.appendChild(table);
+                
+                const chartData = analysisData[`${analysisType}_chart`];
+
+                if (chartData) {
+                    const { labels, values, chartType, title, yAxisLabel } = chartData;
+                    if (chartType === 'pie') {
+                        chart = createPieChart(labels, values, title);
+                    } else if (chartType === 'bar') {
+                        chart = createBarChart(labels, values, yAxisLabel, title);
+                    }
+                    resultDiv.appendChild(chart);
+                    toggleDiv.style.display = 'block';
+                }
+
+                const subheader = document.createElement('div');
+                subheader.className = 'subheader';
+                subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+                resultDiv.prepend(subheader);
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Creates a standard HTML table from an array of objects
         function createTable(data, columnNames = null) {
             const table = document.createElement('table');
             table.id = 'data-table';
             const thead = document.createElement('thead');
             const tbody = document.createElement('tbody');
-
             if (!Array.isArray(data) || data.length === 0) {
                 const tr = document.createElement('tr');
                 const td = document.createElement('td');
@@ -228,11 +219,8 @@
                 table.appendChild(tbody);
                 return table;
             }
-
             let headers = columnNames || Object.keys(data[0]);
             let rows = data.map(obj => headers.map(header => obj[header] !== undefined ? obj[header] : ''));
-
-            // Create header row
             const headerRow = document.createElement('tr');
             headers.forEach(header => {
                 const th = document.createElement('th');
@@ -241,8 +229,6 @@
             });
             thead.appendChild(headerRow);
             table.appendChild(thead);
-
-            // Create data rows
             rows.forEach(rowData => {
                 const row = document.createElement('tr');
                 rowData.forEach(cellData => {
@@ -253,11 +239,82 @@
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
-
             return table;
         }
 
-        // Helper function to create a key-value table for nested objects
+        // Creates a bar chart using Chart.js
+        function createBarChart(labels, values, yAxisLabel, chartTitle) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'bar-chart';
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '180px';
+            chartDiv.appendChild(canvas);
+            
+            myChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: yAxisLabel,
+                        data: values,
+                        backgroundColor: '#3B82F6',
+                        borderColor: '#1E3A8A',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            return chartDiv;
+        }
+        
+        // Creates a pie chart using Chart.js
+        function createPieChart(labels, values, chartTitle) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'pie-chart';
+            const chartDiv = document.createElement('div');
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '180px';
+            chartDiv.appendChild(canvas);
+
+            const backgroundColors = [
+                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#A855F7', '#F43F5E', '#14B8A6'
+            ];
+
+            myChart = new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: backgroundColors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
+                    }
+                }
+            });
+            return chartDiv;
+        }
+
+        // Creates a key-value pair table from an object
         function createKeyValueTable(data) {
             const table = document.createElement('table');
             table.id = 'data-table';
@@ -298,268 +355,67 @@
                     tbody.appendChild(row);
                 }
             }
-
             table.appendChild(tbody);
             return table;
         }
 
-        // Helper function to create a bar chart
-        function createBarChart(data, labels, values, label, title) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'data-chart';
-            canvas.style.display = 'none';
-            new Chart(canvas, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: label,
-                        data: values,
-                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: label
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Category'
-                            }
-                        }
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: title
-                        },
-                        legend: {
-                            display: false
-                        }
-                    }
-                }
-            });
-            return canvas;
-        }
-
-        // Helper function to create a pie chart
-        function createPieChart(data, labels, values, label, title) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'data-chart';
-            canvas.style.display = 'none';
-            const colors = [
-                'rgba(59, 130, 246, 0.8)',
-                'rgba(239, 68, 68, 0.8)',
-                'rgba(34, 197, 94, 0.8)',
-                'rgba(249, 115, 22, 0.8)',
-                'rgba(168, 85, 247, 0.8)',
-                'rgba(20, 184, 166, 0.8)'
-            ];
-            new Chart(canvas, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: label,
-                        data: values,
-                        backgroundColor: colors.slice(0, labels.length),
-                        borderColor: colors.slice(0, labels.length).map(color => color.replace('0.8', '1')),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: title
-                        },
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                font: {
-                                    size: 10
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-            return canvas;
-        }
-
-        // Helper function to toggle between table and chart
+        // Toggles between the table and chart view
         function toggleView() {
+            const chartDiv = document.querySelector('#betting-analysis-result canvas');
             const table = document.getElementById('data-table');
-            const chart = document.getElementById('data-chart');
-            const button = document.querySelector('#toggle-view button');
-            if (table && chart) {
-                if (table.style.display === 'none') {
-                    table.style.display = 'table';
-                    chart.style.display = 'none';
-                    button.textContent = 'Show Chart';
-                } else {
+            const toggleButton = document.querySelector('#toggle-view button');
+            
+            if (chartDiv && table) {
+                if (currentView === 'table') {
                     table.style.display = 'none';
-                    chart.style.display = 'block';
-                    button.textContent = 'Show Table';
-                }
-            }
-        }
-
-        async function fetchBettingAnalysis() {
-            const resultDiv = document.getElementById('betting-analysis-result');
-            const toggleDiv = document.getElementById('toggle-view');
-            const analysisType = document.getElementById('analysis-type').value;
-
-            resultDiv.innerHTML = '<div class="loading">Loading...</div>';
-            toggleDiv.style.display = 'none';
-
-            try {
-                const requestBody = JSON.stringify({ records: records });
-
-                const response = await fetch(apiConfig.url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: requestBody
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'API request failed');
-                }
-
-                const apiData = await response.json();
-                resultDiv.innerHTML = ''; // Clear loading message
-
-                // Add header for the result
-                const subheader = document.createElement('div');
-                subheader.className = 'subheader';
-                subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
-                resultDiv.appendChild(subheader);
-
-                // Extract the relevant data section
-                const data = apiData.data && apiData.data[analysisType] ? apiData.data[analysisType] : [];
-
-                if (analysisType === 'metrics') {
-                    // Render key-value table for metrics
-                    const table = createKeyValueTable(data);
-                    resultDiv.appendChild(table);
-                    
-                    // Create chart for profit/loss metrics if available
-                    if (data['Total Profit/Loss'] !== undefined && data['Total Stakes'] !== undefined) {
-                        const labels = ['Stakes', 'Profit/Loss', 'Net Position'];
-                        const values = [
-                            parseFloat(data['Total Stakes']) || 0,
-                            parseFloat(data['Total Profit/Loss']) || 0,
-                            (parseFloat(data['Total Stakes']) || 0) + (parseFloat(data['Total Profit/Loss']) || 0)
-                        ];
-                        const chart = createBarChart(data, labels, values, 'Amount ($)', 'Financial Overview');
-                        resultDiv.appendChild(chart);
-                        toggleDiv.style.display = 'block';
-                    }
-                    
-                } else if (analysisType === 'sport_breakdown' && Array.isArray(data) && data.length > 0) {
-                    // Render table
-                    const table = createTable(data);
-                    resultDiv.appendChild(table);
-                    
-                    // Create multiple charts for sport breakdown
-                    const labels = data.map(item => item['Sport'] || item[Object.keys(item)[0]]);
-                    
-                    // Chart for Total Stakes
-                    if (data[0]['Total Stakes'] !== undefined) {
-                        const stakeValues = data.map(item => parseFloat(item['Total Stakes']) || 0);
-                        const chart = createBarChart(data, labels, stakeValues, 'Total Stakes ($)', 'Total Stakes by Sport');
-                        resultDiv.appendChild(chart);
-                        toggleDiv.style.display = 'block';
-                    }
-                    
-                } else if (analysisType === 'wager_type_breakdown' && Array.isArray(data) && data.length > 0) {
-                    // Render table
-                    const table = createTable(data);
-                    resultDiv.appendChild(table);
-                    
-                    // Create chart for wager type breakdown
-                    const labels = data.map(item => item['Description'] || item['Wager Type'] || item[Object.keys(item)[0]]);
-                    if (data[0]['Total Stakes'] !== undefined) {
-                        const values = data.map(item => parseFloat(item['Total Stakes']) || 0);
-                        const chart = createPieChart(data, labels, values, 'Total Stakes', 'Stakes Distribution by Wager Type');
-                        resultDiv.appendChild(chart);
-                        toggleDiv.style.display = 'block';
-                    }
-                    
-                } else if (analysisType === 'popular_selections' && Array.isArray(data) && data.length > 0) {
-                    // Render table
-                    const table = createTable(data);
-                    resultDiv.appendChild(table);
-                    
-                    // Create pie chart for popular selections
-                    const labels = data.map(item => item['Selection'] || item[Object.keys(item)[0]]);
-                    if (data[0]['Ticket Count'] !== undefined) {
-                        const values = data.map(item => parseInt(item['Ticket Count']) || 0);
-                        const chart = createPieChart(data, labels, values, 'Ticket Count', 'Popular Selections Distribution');
-                        resultDiv.appendChild(chart);
-                        toggleDiv.style.display = 'block';
-                    }
-                    
-                } else if (analysisType === 'game_timing') {
-                    // Handle game timing data
-                    if (typeof data === 'object' && data !== null) {
-                        const table = createKeyValueTable(data);
-                        resultDiv.appendChild(table);
-                        
-                        // Create chart for timing patterns if available
-                        if (data['Hourly Distribution'] && typeof data['Hourly Distribution'] === 'object') {
-                            const labels = Object.keys(data['Hourly Distribution']);
-                            const values = Object.values(data['Hourly Distribution']).map(val => parseInt(val) || 0);
-                            const chart = createBarChart(data, labels, values, 'Bet Count', 'Betting Activity by Hour');
-                            resultDiv.appendChild(chart);
-                            toggleDiv.style.display = 'block';
-                        } else if (data['Days to Game'] && typeof data['Days to Game'] === 'object') {
-                            const labels = Object.keys(data['Days to Game']);
-                            const values = Object.values(data['Days to Game']).map(val => parseInt(val) || 0);
-                            const chart = createBarChart(data, labels, values, 'Bet Count', 'Betting by Days to Game');
-                            resultDiv.appendChild(chart);
-                            toggleDiv.style.display = 'block';
-                        }
-                    } else if (Array.isArray(data)) {
-                        const table = createTable(data);
-                        resultDiv.appendChild(table);
-                    }
+                    chartDiv.style.display = 'block';
+                    toggleButton.textContent = 'Show Table';
+                    currentView = 'chart';
                 } else {
-                    // Fallback to table for empty or unexpected data
-                    const table = createTable([], ['No Data']);
-                    resultDiv.appendChild(table);
+                    table.style.display = 'block';
+                    chartDiv.style.display = 'none';
+                    toggleButton.textContent = 'Show Chart';
+                    currentView = 'table';
                 }
-
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="error">
-                        Error: ${error.message}<br>
-                        <small>Check browser console for more details</small>
-                    </div>
-                `;
-                console.error('API Error: ', error);
             }
         }
 
-        // Initial load
+        // Listens for a 'message' event to receive data from the parent frame (Streamlit app)
+        window.addEventListener('message', function(event) {
+            const debugDiv = document.getElementById('debug-info');
+            console.log('Message received from:', event.origin, 'Data:', event.data);
+            debugDiv.textContent = `Received from ${event.origin} at ${new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/London'})}`;
+
+            const allowedOrigins = [
+                // Add your Streamlit app's URL here for production security
+                // For example: "https://your-app-name.streamlit.app"
+            ];
+            
+            // Note: For local development, event.origin will be "null"
+            if (event.origin !== "null" && allowedOrigins.length > 0 && !allowedOrigins.includes(event.origin)) {
+                debugDiv.textContent = `Security alert: Message blocked from untrusted origin: ${event.origin}`;
+                return;
+            }
+            
+            if (event.data && event.data.type === 'bettingData') {
+                try {
+                    analysisData = JSON.parse(event.data.analysis);
+                    debugDiv.textContent += ` | Analysis data received.`;
+                    console.log('Analysis data processed:', analysisData);
+                    renderAnalysis();
+                } catch (e) {
+                    debugDiv.textContent += ` | Error parsing JSON: ${e.message}`;
+                    console.error("Failed to parse JSON:", e);
+                }
+            } else {
+                debugDiv.textContent += ' | Invalid or no data';
+            }
+        });
+
+        // Initialize debug message on page load
         window.onload = function() {
-            fetchBettingAnalysis();
-        };
+            document.getElementById('debug-info').textContent = 'Waiting for data from parent frame...';
+        }
     </script>
 </body>
 </html>
