@@ -202,6 +202,7 @@
                 const chartData = analysisData[`${analysisType}_chart`];
 
                 if (chartData) {
+                    console.log("Chart data found:", chartData);
                     const { labels, values, chartType, title, yAxisLabel } = chartData;
                     if (chartType === 'pie') {
                         chart = createPieChart(labels, values, title);
@@ -210,6 +211,10 @@
                     }
                     resultDiv.appendChild(chart);
                     toggleDiv.style.display = 'block';
+                } else {
+                    console.log("No chart data found for analysis type:", analysisType);
+                    // Optionally, you can display a message to the user here
+                    // resultDiv.innerHTML += `<div class="info">No chart available for this analysis type.</div>`;
                 }
 
                 const subheader = document.createElement('div');
