@@ -6,10 +6,6 @@
     <title>Customer Widget</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
-        /*
-         * Setting margin: 0 on the body ensures the widget
-         * extends to the very edge of the page.
-         */
         body {
             margin: 0;
             background-color: #f0f2f5;
@@ -85,23 +81,6 @@
             border-radius: 4px;
             border: 1px solid #FECACA;
         }
-        .analytics-widget .loading {
-            font-size: 12px;
-            color: #6B7280;
-            text-align: center;
-            padding: 20px;
-        }
-        .analytics-widget .raw-data {
-            font-size: 10px;
-            color: #374151;
-            white-space: pre-wrap;
-            background-color: #F9FAFB;
-            padding: 4px;
-            border-radius: 4px;
-            margin-top: 8px;
-            max-height: 100px;
-            overflow-y: auto;
-        }
         .analytics-widget .debug-info {
             font-size: 10px;
             color: #6B7280;
@@ -114,19 +93,6 @@
             max-height: 180px;
             width: 100%;
             margin-bottom: 8px;
-        }
-        .analytics-widget button {
-            font-size: 12px;
-            padding: 4px 8px;
-            margin-bottom: 8px;
-            background-color: #3B82F6;
-            color: #FFFFFF;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .analytics-widget button:hover {
-            background-color: #1E3A8A;
         }
     </style>
 </head>
@@ -146,39 +112,84 @@
 
     <script>
         let analysisData = null;
-        
-        // This function will render the analysis based on the selected type
+        let chartInstance = null;
+
         function renderAnalysis() {
             const resultDiv = document.getElementById('betting-analysis-result');
             const analysisType = document.getElementById('analysis-type').value;
             resultDiv.innerHTML = '';
-            
+
             if (!analysisData) {
                 resultDiv.innerHTML = `<div class="error">No data has been received from the API.</div>`;
                 return;
             }
-            
+
             let data, table = null;
-            
+
             try {
-                if (analysisData[analysisType] === null || typeof analysisData[analysisType] === 'undefined') {
+                if (!analysisData[analysisType]) {
                     resultDiv.innerHTML = `<div class="error">No data available for this analysis type from the API.</div>`;
                     return;
                 }
 
                 data = analysisData[analysisType];
-                
+
                 if (analysisType === 'metrics' || analysisType === 'game_timing') {
                     table = createKeyValueTable(data);
-                } else if (data && Array.isArray(data)) {
+                    resultDiv.appendChild(table);
+                } else if (Array.isArray(data)) {
+                    // --- Insert chart ---
+                    if (['sport_breakdown', 'wager_type_breakdown', 'popular_selections'].includes(analysisType)) {
+                        const canvas = document.createElement('canvas');
+                        canvas.id = "chartCanvas";
+                        resultDiv.appendChild(canvas);
+
+                        if (chartInstance) chartInstance.destroy();
+
+                        const labels = data.map(d => d.name || d.sport || d.type || d.selection || "Item");
+                        const values = data.map(d => d.count || d.value || d.total || 0);
+
+                        const chartType = (analysisType === 'popular_selections') ? 'bar' : 'pie';
+
+                        chartInstance = new Chart(canvas.getContext('2d'), {
+                            type: chartType,
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: analysisType.replace('_',' '),
+                                    data: values,
+                                    backgroundColor: [
+                                        'rgba(59,130,246,0.7)',
+                                        'rgba(16,185,129,0.7)',
+                                        'rgba(234,179,8,0.7)',
+                                        'rgba(239,68,68,0.7)',
+                                        'rgba(139,92,246,0.7)',
+                                        'rgba(236,72,153,0.7)'
+                                    ],
+                                    borderColor: 'rgba(30,58,138,1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: { display: true, position: 'bottom' }
+                                },
+                                scales: chartType === 'bar'
+                                    ? { y: { beginAtZero: true } }
+                                    : {}
+                            }
+                        });
+                    }
+
+                    // --- Table below chart ---
                     table = createTable(data);
+                    resultDiv.appendChild(table);
                 } else {
                     resultDiv.innerHTML = `<div class="error">Invalid data format for this analysis type.</div>`;
                     return;
                 }
-                
-                resultDiv.appendChild(table);
-                
+
                 const subheader = document.createElement('div');
                 subheader.className = 'subheader';
                 subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
@@ -189,7 +200,6 @@
             }
         }
 
-        // Creates a standard HTML table from an array of objects
         function createTable(data, columnNames = null) {
             const table = document.createElement('table');
             table.id = 'data-table';
@@ -226,85 +236,43 @@
             table.appendChild(tbody);
             return table;
         }
-        
-        // Creates a key-value pair table from an object
+
         function createKeyValueTable(data) {
             const table = document.createElement('table');
             table.id = 'data-table';
             const tbody = document.createElement('tbody');
-
             for (const [key, value] of Object.entries(data)) {
-                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    valueCell.textContent = JSON.stringify(value);
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                } else if (Array.isArray(value)) {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    if (value.length > 0 && typeof value[0] === 'object') {
-                        const subTable = createTable(value);
-                        valueCell.appendChild(subTable);
-                    } else {
-                        valueCell.textContent = JSON.stringify(value);
-                    }
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                } else {
-                    const row = document.createElement('tr');
-                    const keyCell = document.createElement('td');
-                    keyCell.textContent = key;
-                    const valueCell = document.createElement('td');
-                    valueCell.textContent = value;
-                    row.appendChild(keyCell);
-                    row.appendChild(valueCell);
-                    tbody.appendChild(row);
-                }
+                const row = document.createElement('tr');
+                const keyCell = document.createElement('td');
+                keyCell.textContent = key;
+                const valueCell = document.createElement('td');
+                valueCell.textContent = (typeof value === 'object') ? JSON.stringify(value) : value;
+                row.appendChild(keyCell);
+                row.appendChild(valueCell);
+                tbody.appendChild(row);
             }
             table.appendChild(tbody);
             return table;
         }
 
-        // Listens for a 'message' event to receive data from the parent frame
         window.addEventListener('message', function(event) {
             const debugDiv = document.getElementById('debug-info');
             console.log('Message received from:', event.origin, 'Data:', event.data);
             debugDiv.textContent = `Received from ${event.origin} at ${new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/London'})}`;
 
-            const allowedOrigins = [
-                // Add your app URL here for production security
-                // For example: "https://your-app-name.com"
-            ];
-            
-            // Note: For local development, event.origin will be "null"
-            if (event.origin !== "null" && allowedOrigins.length > 0 && !allowedOrigins.includes(event.origin)) {
-                debugDiv.textContent = `Security alert: Message blocked from untrusted origin: ${event.origin}`;
-                return;
-            }
-            
             if (event.data && event.data.type === 'bettingData') {
                 try {
                     analysisData = JSON.parse(event.data.analysis);
                     debugDiv.textContent += ` | Analysis data received.`;
-                    console.log('Analysis data processed:', analysisData);
                     renderAnalysis();
                 } catch (e) {
                     debugDiv.textContent += ` | Error parsing JSON: ${e.message}`;
-                    console.error("Failed to parse JSON:", e);
                 }
             } else {
                 debugDiv.textContent += ' | Invalid or no data';
             }
         });
 
-        // Initialize debug message on page load
         window.onload = function() {
             document.getElementById('debug-info').textContent = 'Waiting for data from parent frame...';
         }
