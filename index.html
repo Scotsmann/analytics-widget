@@ -102,8 +102,8 @@
                 // Clear any existing content
                 dataContainer.innerHTML = '';
                 // Check if the data is a valid object
-                if (typeof data !== 'object' || data === null) {
-                    showError('Invalid data format received from the API.');
+                if (typeof data !== 'object' || data === null || Object.keys(data).length === 0) {
+                    showError('No data or invalid data format received from the API.');
                     return;
                 }
 
@@ -157,6 +157,8 @@
                         showError('Failed to render data. Please check the data format.');
                         console.error('Rendering error:', error);
                     }
+                } else if (message && message.type === 'bettingData' && message.error) {
+                    showError(message.error);
                 } else {
                     console.warn('Received an invalid message type or no data.');
                     showError('Received an invalid message or no data from the parent page.');
