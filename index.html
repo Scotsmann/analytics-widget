@@ -272,15 +272,15 @@
             return table;
         }
 
-        // Listens for a 'message' event to receive data from the parent frame (Streamlit app)
+        // Listens for a 'message' event to receive data from the parent frame
         window.addEventListener('message', function(event) {
             const debugDiv = document.getElementById('debug-info');
             console.log('Message received from:', event.origin, 'Data:', event.data);
             debugDiv.textContent = `Received from ${event.origin} at ${new Date().toLocaleTimeString('en-GB', { timeZone: 'Europe/London'})}`;
 
             const allowedOrigins = [
-                // Add your Streamlit app's URL here for production security
-                // For example: "https://your-app-name.streamlit.app"
+                // Add your app URL here for production security
+                // For example: "https://your-app-name.com"
             ];
             
             // Note: For local development, event.origin will be "null"
@@ -311,3 +311,4 @@
     </script>
 </body>
 </html>
+
