@@ -19,11 +19,6 @@
             flex-direction: column;
             align-items: flex-start;
         }
-        .main-container h1 {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 20px;
-        }
         .analytics-widget {
             border: 2px solid #1E3A8A;
             border-radius: 8px;
@@ -141,7 +136,6 @@
 </head>
 <body>
     <div class="main-container">
-        <h1>Customer</h1>
         <div class="analytics-widget">
             <h3>Customer Widget</h3>
             <select id="analysis-type" onchange="renderAnalysis()">
@@ -151,9 +145,6 @@
                 <option value="popular_selections">Popular Selections</option>
                 <option value="game_timing">Game Timing</option>
             </select>
-            <div id="toggle-view" style="display: none;">
-                <button onclick="toggleView()">Show Chart</button>
-            </div>
             <div id="betting-analysis-result"></div>
             <div id="debug-info" class="debug-info"></div>
         </div>
@@ -161,24 +152,19 @@
 
     <script>
         let analysisData = null;
-        let myChart = null;
-        let currentView = 'table';
         
         // This function will render the analysis based on the selected type
         function renderAnalysis() {
             const resultDiv = document.getElementById('betting-analysis-result');
-            const toggleDiv = document.getElementById('toggle-view');
             const analysisType = document.getElementById('analysis-type').value;
             resultDiv.innerHTML = '';
-            toggleDiv.style.display = 'none';
-            currentView = 'table';
             
             if (!analysisData) {
                 resultDiv.innerHTML = `<div class="error">No data has been received from the API.</div>`;
                 return;
             }
             
-            let data, table, chart = null;
+            let data, table = null;
             
             try {
                 if (analysisData[analysisType] === null || typeof analysisData[analysisType] === 'undefined') {
@@ -199,24 +185,6 @@
                 
                 resultDiv.appendChild(table);
                 
-                const chartData = analysisData[`${analysisType}_chart`];
-
-                if (chartData) {
-                    console.log("Chart data found:", chartData);
-                    const { labels, values, chartType, title, yAxisLabel } = chartData;
-                    if (chartType === 'pie') {
-                        chart = createPieChart(labels, values, title);
-                    } else if (chartType === 'bar') {
-                        chart = createBarChart(labels, values, yAxisLabel, title);
-                    }
-                    resultDiv.appendChild(chart);
-                    toggleDiv.style.display = 'block';
-                } else {
-                    console.log("No chart data found for analysis type:", analysisType);
-                    // Optionally, you can display a message to the user here
-                    // resultDiv.innerHTML += `<div class="info">No chart available for this analysis type.</div>`;
-                }
-
                 const subheader = document.createElement('div');
                 subheader.className = 'subheader';
                 subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
@@ -264,79 +232,7 @@
             table.appendChild(tbody);
             return table;
         }
-
-        // Creates a bar chart using Chart.js
-        function createBarChart(labels, values, yAxisLabel, chartTitle) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'bar-chart';
-            const chartDiv = document.createElement('div');
-            chartDiv.style.width = '100%';
-            chartDiv.style.height = '180px';
-            chartDiv.appendChild(canvas);
-            
-            myChart = new Chart(canvas, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: yAxisLabel,
-                        data: values,
-                        backgroundColor: '#3B82F6',
-                        borderColor: '#1E3A8A',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-            return chartDiv;
-        }
         
-        // Creates a pie chart using Chart.js
-        function createPieChart(labels, values, chartTitle) {
-            const canvas = document.createElement('canvas');
-            canvas.id = 'pie-chart';
-            const chartDiv = document.createElement('div');
-            chartDiv.style.width = '100%';
-            chartDiv.style.height = '180px';
-            chartDiv.appendChild(canvas);
-
-            const backgroundColors = [
-                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#A855F7', '#F43F5E', '#14B8A6'
-            ];
-
-            myChart = new Chart(canvas, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: backgroundColors.slice(0, labels.length)
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right' },
-                        title: { display: true, text: chartTitle, font: { size: 12, weight: 'bold' } }
-                    }
-                }
-            });
-            return chartDiv;
-        }
-
         // Creates a key-value pair table from an object
         function createKeyValueTable(data) {
             const table = document.createElement('table');
@@ -380,27 +276,6 @@
             }
             table.appendChild(tbody);
             return table;
-        }
-
-        // Toggles between the table and chart view
-        function toggleView() {
-            const chartDiv = document.querySelector('#betting-analysis-result canvas');
-            const table = document.getElementById('data-table');
-            const toggleButton = document.querySelector('#toggle-view button');
-            
-            if (chartDiv && table) {
-                if (currentView === 'table') {
-                    table.style.display = 'none';
-                    chartDiv.style.display = 'block';
-                    toggleButton.textContent = 'Show Table';
-                    currentView = 'chart';
-                } else {
-                    table.style.display = 'block';
-                    chartDiv.style.display = 'none';
-                    toggleButton.textContent = 'Show Chart';
-                    currentView = 'table';
-                }
-            }
         }
 
         // Listens for a 'message' event to receive data from the parent frame (Streamlit app)
