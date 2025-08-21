@@ -3,168 +3,563 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Betting Analytics Widget</title>
-    <!-- Use Tailwind CSS from a CDN for easy styling -->
+    <title>Betting Analysis</title>
+    <!-- Use Tailwind CSS from a CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Include Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Apply a default font and background color */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f4f7f9;
+            background-color: #f3f4f6;
+            color: #1f2937;
         }
-        /* Style for the loading spinner */
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #1a73e8;
-            animation: spin 1s ease infinite;
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 1rem;
         }
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-top: 1.5rem;
+            border: 1px solid #e5e7eb;
+        }
+        .header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .subheader {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #4b5563;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        .loading, .error {
+            text-align: center;
+            font-size: 1.125rem;
+            color: #6b7280;
+            padding: 2rem;
+            background-color: #f9fafb;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+        }
+        .error {
+            color: #ef4444;
+            background-color: #fef2f2;
+            border-color: #fecaca;
+        }
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        button.primary {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+        button.primary:hover {
+            background-color: #2563eb;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+        }
+        button.secondary {
+            background-color: #f3f4f6;
+            color: #3b82f6;
+            border: 1px solid #d1d5db;
+        }
+        button.secondary:hover {
+            background-color: #e5e7eb;
+        }
+        select {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f3f4f6;
+        }
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 500px;
         }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100">
 
-    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-4xl mx-auto space-y-6 m-4">
+    <div class="container">
+        <div class="card">
+            <h1 class="header">Betting Analysis Dashboard</h1>
+            
+            <!-- Dropdown for analysis type and button -->
+            <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <label for="analysis-type" class="text-sm font-medium text-gray-700">Select Analysis:</label>
+                <select id="analysis-type" class="w-full sm:w-auto">
+                    <option value="metrics">Overall Metrics</option>
+                    <option value="sport_breakdown">Sport Breakdown</option>
+                    <option value="wager_type_breakdown">Wager Type Breakdown</option>
+                    <option value="popular_selections">Popular Selections</option>
+                    <option value="game_timing">Game Timing</option>
+                </select>
+                <button onclick="fetchBettingAnalysis()" class="primary w-full sm:w-auto">Run Analysis</button>
+            </div>
 
-        <!-- Header Section -->
-        <div class="text-center">
-            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight">Betting Analytics Widget</h1>
-            <p class="mt-2 text-lg text-gray-500">
-                Waiting for data from the parent page...
-            </p>
-        </div>
+            <!-- Div to display results -->
+            <div id="betting-analysis-result" class="mt-8">
+                <div class="loading">Select an analysis type and click "Run Analysis" to see the results.</div>
+            </div>
 
-        <!-- Loading and Error Messages -->
-        <div id="loading-spinner" class="flex flex-col items-center justify-center space-y-4">
-            <div class="spinner"></div>
-            <p class="text-gray-600 font-medium">Processing data...</p>
-        </div>
-
-        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong class="font-bold">Error!</strong>
-            <span class="block sm:inline" id="error-text">Something went wrong. Please try again later.</span>
-        </div>
-
-        <!-- Data Display Section -->
-        <div id="data-container" class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Data will be rendered here by JavaScript -->
+            <!-- Toggle button for chart/table view -->
+            <div id="toggle-view" class="mt-4 text-center" style="display: none;">
+                <button onclick="toggleView()" class="secondary">Show Chart</button>
+            </div>
         </div>
     </div>
 
-    <!-- JavaScript to Fetch and Render the Data -->
     <script>
-        // Use an immediately invoked function to avoid global variables
-        (async function() {
-            // Get references to DOM elements
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const dataContainer = document.getElementById('data-container');
-            const errorMessage = document.getElementById('error-message');
-            const errorText = document.getElementById('error-text');
-            const headerText = document.querySelector('p.text-lg');
+        // Configuration
+        const apiConfig = {
+            url: 'https://kompili-ip-analytics-a52176efd7f2.herokuapp.com/betting-analysis',
+            apiKey: '' // Add your API key here if required
+        };
 
-            // Initially hide the data container and show the waiting message
-            dataContainer.classList.add('hidden');
-            loadingSpinner.classList.add('hidden');
-            headerText.textContent = "Waiting for data from the parent page...";
+        // Example betting records. This would be replaced with dynamic data in a real application.
+        const records = [
+            {
+                "CustomerID": "C12345",
+                "PostedDateTime": "2025-08-13 18:00:29",
+                "GameDateTime": "2025-08-13 18:10:01",
+                "TicketNumber": "388239142",
+                "WagerType": "M",
+                "TotalPicks": 1,
+                "ItemNumber": 1,
+                "SportType": "Baseball",
+                "SportSubType": "MLB",
+                "LineType": "M",
+                "ChosenTeamID": "Pittsburgh Pirates",
+                "PeriodDescription": "Game",
+                "FinalAmountWagered": 175.0,
+                "FinalAmountWon": 0.0,
+                "FinalMoney": 121,
+                "FinalDecimal": 2.21,
+                "AmountWagered": 175.0,
+                "ToWinAmount": 211.75,
+                "VolumeAmount": 175.0,
+                "Description": "Baseball - 952 Pittsburgh Pirates +121 for Game Logan Webb (R) - Action Mike Burrows (R) - Action",
+                "AgentID": "DIGI.YOU",
+                "OrigSpread": 0,
+                "OrigTotalPoints": 0,
+                "OrigMoney": 121
+            },
+            {
+                "CustomerID": "C12345",
+                "PostedDateTime": "2025-08-05 10:32:43",
+                "GameDateTime": "2025-08-05 18:40:01",
+                "TicketNumber": "386332331",
+                "WagerType": "M",
+                "TotalPicks": 1,
+                "ItemNumber": 1,
+                "SportType": "Baseball",
+                "SportSubType": "MLB",
+                "LineType": "M",
+                "ChosenTeamID": "Pittsburgh Pirates",
+                "PeriodDescription": "Game",
+                "FinalAmountWagered": 300.0,
+                "FinalAmountWon": 0.0,
+                "FinalMoney": 121,
+                "FinalDecimal": 2.21,
+                "AmountWagered": 300.0,
+                "ToWinAmount": 363.0,
+                "VolumeAmount": 300.0,
+                "Description": "Baseball - 952 Pittsburgh Pirates +121 for Game Logan Webb (R) - Action Mike Burrows (R) - Action",
+                "AgentID": "DIGI.YOU",
+                "OrigSpread": 0,
+                "OrigTotalPoints": 0,
+                "OrigMoney": 121
+            }
+        ];
 
-            // Function to show an error message
-            function showError(message) {
-                loadingSpinner.classList.add('hidden');
-                dataContainer.classList.add('hidden');
-                errorMessage.classList.remove('hidden');
-                errorText.textContent = message;
-                headerText.textContent = "An error occurred.";
+        // Helper function to create a table from data
+        function createTable(data, columnNames = null) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            if (!Array.isArray(data) || data.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.textContent = 'No data available';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                table.appendChild(tbody);
+                return table;
             }
 
-            // Function to format numbers for display
-            function formatNumber(value) {
-                if (typeof value === 'number') {
-                    // Check if the number is an integer
-                    if (Number.isInteger(value)) {
-                        return value;
+            let headers = columnNames || Object.keys(data[0]);
+            let rows = data.map(obj => headers.map(header => obj[header] !== undefined ? obj[header] : ''));
+
+            // Create header row
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create data rows
+            rows.forEach(rowData => {
+                const row = document.createElement('tr');
+                rowData.forEach(cellData => {
+                    const td = document.createElement('td');
+                    td.textContent = typeof cellData === 'object' ? JSON.stringify(cellData) : cellData;
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+
+            return table;
+        }
+
+        // Helper function to create a key-value table for nested objects
+        function createKeyValueTable(data) {
+            const table = document.createElement('table');
+            table.id = 'data-table';
+            const tbody = document.createElement('tbody');
+
+            for (const [key, value] of Object.entries(data)) {
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = JSON.stringify(value);
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                } else if (Array.isArray(value)) {
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    if (value.length > 0 && typeof value[0] === 'object') {
+                        const subTable = createTable(value);
+                        valueCell.appendChild(subTable);
+                    } else {
+                        valueCell.textContent = JSON.stringify(value);
                     }
-                    return value.toFixed(2);
-                }
-                return value;
-            }
-
-            // Function to render the fetched data
-            function renderData(data) {
-                // Clear any existing content
-                dataContainer.innerHTML = '';
-                // Check if the data is a valid object
-                if (typeof data !== 'object' || data === null || Object.keys(data).length === 0) {
-                    showError('No data or invalid data format received from the API.');
-                    return;
-                }
-
-                // Iterate over the keys in the data object and create cards for each
-                for (const key in data) {
-                    if (Object.hasOwnProperty.call(data, key)) {
-                        // Create a new div for each data point
-                        const dataCard = document.createElement('div');
-                        dataCard.className = 'bg-white p-6 rounded-xl shadow-sm border border-gray-200';
-
-                        // Create the title of the card from the key
-                        const cardTitle = document.createElement('h3');
-                        cardTitle.className = 'text-xl font-semibold text-gray-700 capitalize break-words';
-                        // Replace underscores with spaces and capitalize the first letter of each word
-                        cardTitle.textContent = key.replace(/_/g, ' ');
-
-                        // Create a paragraph for the value
-                        const cardValue = document.createElement('p');
-                        cardValue.className = 'mt-2 text-3xl font-bold text-blue-600';
-                        cardValue.textContent = formatNumber(data[key]);
-
-                        // Append elements to the card and the card to the container
-                        dataCard.appendChild(cardTitle);
-                        dataCard.appendChild(cardValue);
-                        dataContainer.appendChild(dataCard);
-                    }
-                }
-                loadingSpinner.classList.add('hidden');
-                dataContainer.classList.remove('hidden');
-                headerText.textContent = 'Data loaded successfully!';
-            }
-
-            // Listen for messages from the parent window
-            window.addEventListener('message', async (event) => {
-                // IMPORTANT: In a production app, you should verify the origin
-                // to prevent cross-site scripting attacks.
-                // For example: if (event.origin !== 'https://your-parent-site.com') return;
-
-                const message = event.data;
-
-                // Check if the message is the type we are expecting
-                if (message && message.type === 'bettingData' && message.data) {
-                    loadingSpinner.classList.remove('hidden');
-                    errorMessage.classList.add('hidden');
-                    dataContainer.classList.add('hidden');
-                    headerText.textContent = "Processing data...";
-                    loadingSpinner.classList.remove('hidden');
-                    try {
-                        renderData(message.data);
-                    } catch (error) {
-                        showError('Failed to render data. Please check the data format.');
-                        console.error('Rendering error:', error);
-                    }
-                } else if (message && message.type === 'bettingData' && message.error) {
-                    showError(message.error);
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
                 } else {
-                    console.warn('Received an invalid message type or no data.');
-                    showError('Received an invalid message or no data from the parent page.');
+                    const row = document.createElement('tr');
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = key;
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = value;
+                    row.appendChild(keyCell);
+                    row.appendChild(valueCell);
+                    tbody.appendChild(row);
+                }
+            }
+
+            table.appendChild(tbody);
+            return table;
+        }
+
+        // Helper function to create a bar chart
+        function createBarChart(data, labels, values, label, title) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'data-chart';
+            canvas.style.display = 'none';
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: label
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Category'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title
+                        },
+                        legend: {
+                            display: false
+                        }
+                    }
                 }
             });
-        })();
+            return canvas;
+        }
+
+        // Helper function to create a pie chart
+        function createPieChart(data, labels, values, label, title) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'data-chart';
+            canvas.style.display = 'none';
+            const colors = [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(249, 115, 22, 0.8)',
+                'rgba(168, 85, 247, 0.8)',
+                'rgba(20, 184, 166, 0.8)'
+            ];
+            new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: colors.slice(0, labels.length).map(color => color.replace('0.8', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title
+                        },
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            return canvas;
+        }
+
+        // Helper function to toggle between table and chart
+        function toggleView() {
+            const table = document.getElementById('data-table');
+            const chart = document.getElementById('data-chart');
+            const button = document.querySelector('#toggle-view button');
+            if (table && chart) {
+                if (table.style.display === 'none') {
+                    table.style.display = 'table';
+                    chart.style.display = 'none';
+                    button.textContent = 'Show Chart';
+                } else {
+                    table.style.display = 'none';
+                    chart.style.display = 'block';
+                    button.textContent = 'Show Table';
+                }
+            }
+        }
+
+        async function fetchBettingAnalysis() {
+            const resultDiv = document.getElementById('betting-analysis-result');
+            const toggleDiv = document.getElementById('toggle-view');
+            const analysisType = document.getElementById('analysis-type').value;
+
+            resultDiv.innerHTML = '<div class="loading">Loading...</div>';
+            toggleDiv.style.display = 'none';
+
+            try {
+                const requestBody = JSON.stringify({ records: records });
+
+                const response = await fetch(apiConfig.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: requestBody
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'API request failed');
+                }
+
+                const apiData = await response.json();
+                resultDiv.innerHTML = ''; // Clear loading message
+
+                // Add header for the result
+                const subheader = document.createElement('div');
+                subheader.className = 'subheader';
+                subheader.textContent = `Betting Analysis: ${analysisType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+                resultDiv.appendChild(subheader);
+
+                // Extract the relevant data section
+                const data = apiData.data && apiData.data[analysisType] ? apiData.data[analysisType] : [];
+
+                if (analysisType === 'metrics') {
+                    // Render key-value table for metrics
+                    const table = createKeyValueTable(data);
+                    resultDiv.appendChild(table);
+                    
+                    // Create chart for profit/loss metrics if available
+                    if (data['Total Profit/Loss'] !== undefined && data['Total Stakes'] !== undefined) {
+                        const labels = ['Stakes', 'Profit/Loss', 'Net Position'];
+                        const values = [
+                            parseFloat(data['Total Stakes']) || 0,
+                            parseFloat(data['Total Profit/Loss']) || 0,
+                            (parseFloat(data['Total Stakes']) || 0) + (parseFloat(data['Total Profit/Loss']) || 0)
+                        ];
+                        const chart = createBarChart(data, labels, values, 'Amount ($)', 'Financial Overview');
+                        resultDiv.appendChild(chart);
+                        toggleDiv.style.display = 'block';
+                    }
+                    
+                } else if (analysisType === 'sport_breakdown' && Array.isArray(data) && data.length > 0) {
+                    // Render table
+                    const table = createTable(data);
+                    resultDiv.appendChild(table);
+                    
+                    // Create multiple charts for sport breakdown
+                    const labels = data.map(item => item['Sport'] || item[Object.keys(item)[0]]);
+                    
+                    // Chart for Total Stakes
+                    if (data[0]['Total Stakes'] !== undefined) {
+                        const stakeValues = data.map(item => parseFloat(item['Total Stakes']) || 0);
+                        const chart = createBarChart(data, labels, stakeValues, 'Total Stakes ($)', 'Total Stakes by Sport');
+                        resultDiv.appendChild(chart);
+                        toggleDiv.style.display = 'block';
+                    }
+                    
+                } else if (analysisType === 'wager_type_breakdown' && Array.isArray(data) && data.length > 0) {
+                    // Render table
+                    const table = createTable(data);
+                    resultDiv.appendChild(table);
+                    
+                    // Create chart for wager type breakdown
+                    const labels = data.map(item => item['Description'] || item['Wager Type'] || item[Object.keys(item)[0]]);
+                    if (data[0]['Total Stakes'] !== undefined) {
+                        const values = data.map(item => parseFloat(item['Total Stakes']) || 0);
+                        const chart = createPieChart(data, labels, values, 'Total Stakes', 'Stakes Distribution by Wager Type');
+                        resultDiv.appendChild(chart);
+                        toggleDiv.style.display = 'block';
+                    }
+                    
+                } else if (analysisType === 'popular_selections' && Array.isArray(data) && data.length > 0) {
+                    // Render table
+                    const table = createTable(data);
+                    resultDiv.appendChild(table);
+                    
+                    // Create pie chart for popular selections
+                    const labels = data.map(item => item['Selection'] || item[Object.keys(item)[0]]);
+                    if (data[0]['Ticket Count'] !== undefined) {
+                        const values = data.map(item => parseInt(item['Ticket Count']) || 0);
+                        const chart = createPieChart(data, labels, values, 'Ticket Count', 'Popular Selections Distribution');
+                        resultDiv.appendChild(chart);
+                        toggleDiv.style.display = 'block';
+                    }
+                    
+                } else if (analysisType === 'game_timing') {
+                    // Handle game timing data
+                    if (typeof data === 'object' && data !== null) {
+                        const table = createKeyValueTable(data);
+                        resultDiv.appendChild(table);
+                        
+                        // Create chart for timing patterns if available
+                        if (data['Hourly Distribution'] && typeof data['Hourly Distribution'] === 'object') {
+                            const labels = Object.keys(data['Hourly Distribution']);
+                            const values = Object.values(data['Hourly Distribution']).map(val => parseInt(val) || 0);
+                            const chart = createBarChart(data, labels, values, 'Bet Count', 'Betting Activity by Hour');
+                            resultDiv.appendChild(chart);
+                            toggleDiv.style.display = 'block';
+                        } else if (data['Days to Game'] && typeof data['Days to Game'] === 'object') {
+                            const labels = Object.keys(data['Days to Game']);
+                            const values = Object.values(data['Days to Game']).map(val => parseInt(val) || 0);
+                            const chart = createBarChart(data, labels, values, 'Bet Count', 'Betting by Days to Game');
+                            resultDiv.appendChild(chart);
+                            toggleDiv.style.display = 'block';
+                        }
+                    } else if (Array.isArray(data)) {
+                        const table = createTable(data);
+                        resultDiv.appendChild(table);
+                    }
+                } else {
+                    // Fallback to table for empty or unexpected data
+                    const table = createTable([], ['No Data']);
+                    resultDiv.appendChild(table);
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        Error: ${error.message}<br>
+                        <small>Check browser console for more details</small>
+                    </div>
+                `;
+                console.error('API Error: ', error);
+            }
+        }
+
+        // Initial load
+        window.onload = function() {
+            fetchBettingAnalysis();
+        };
     </script>
 </body>
 </html>
