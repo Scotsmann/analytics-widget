@@ -9,15 +9,15 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             margin: 0;
-            padding: 20px;
             background-color: #f0f2f5;
         }
         .main-container {
-            max-width: 800px;
+            max-width: 600px;
             margin: auto;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            padding: 20px;
         }
         .analytics-widget {
             border: 2px solid #1E3A8A;
@@ -25,8 +25,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 10px;
             background-color: #F3F4F6;
-            width: 800px;
-            height: 340px;
+            width: 100%;
             overflow-y: auto;
             position: relative;
             display: block;
@@ -135,7 +134,7 @@
     </style>
 </head>
 <body>
-    
+    <div class="main-container">
         <div class="analytics-widget">
             <h3>Customer Widget</h3>
             <select id="analysis-type" onchange="renderAnalysis()">
@@ -148,7 +147,7 @@
             <div id="betting-analysis-result"></div>
             <div id="debug-info" class="debug-info"></div>
         </div>
-    
+    </div>
 
     <script>
         let analysisData = null;
@@ -317,5 +316,3 @@
     </script>
 </body>
 </html>
-
-
